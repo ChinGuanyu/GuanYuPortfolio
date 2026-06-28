@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/tokens.css">
   <link rel="stylesheet" href="../css/inner.css">
+  <link rel="stylesheet" href="../css/editor.css">
   <style>
     .hub-grid {
       display: grid;
@@ -122,5 +123,14 @@
     </nav>
   </footer>
 
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="../js/editor.js"></script>
 </body>
 </html>

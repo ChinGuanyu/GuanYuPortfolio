@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/tokens.css">
   <link rel="stylesheet" href="../css/inner.css">
+  <link rel="stylesheet" href="../css/editor.css">
   <style>
     /* ── Filter bar ── */
     .filter-bar {
@@ -292,23 +293,28 @@
   </footer>
 
   <script>
-    const btns = document.querySelectorAll('.filter-btn');
-    const cards = document.querySelectorAll('.project-card');
-
-    btns.forEach(btn => {
+    // Static filter — editor.js re-wires dynamic cards after it loads
+    document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        btns.forEach(b => b.classList.remove('is-active'));
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
         const filter = btn.dataset.filter;
-        cards.forEach(card => {
-          if (filter === 'all' || card.dataset.category === filter) {
-            card.classList.remove('is-hidden');
-          } else {
-            card.classList.add('is-hidden');
-          }
+        document.querySelectorAll('.project-card').forEach(card => {
+          card.classList.toggle('is-hidden',
+            filter !== 'all' && card.dataset.category !== filter);
         });
       });
     });
   </script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="../js/editor.js"></script>
 </body>
 </html>

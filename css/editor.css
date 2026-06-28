@@ -1,0 +1,396 @@
+/*
+  Editor mode styles — loaded on every page alongside tokens.css and inner.css.
+  All editor UI is hidden by default; only visible when .editor-active is on <body>
+  or for always-visible elements like .editor-key.
+*/
+
+/* ── Edit key button (always visible, top-right of nav) ── */
+.editor-key {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--wire);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+.editor-key:hover {
+  color: var(--clay);
+  border-color: var(--clay);
+}
+
+/* On intro page the edit key is fixed bottom-right (no .site-nav) */
+.editor-key--fixed {
+  position: fixed;
+  bottom: var(--space-3);
+  right: var(--space-3);
+  z-index: 10;
+  background: var(--bg);
+  border-color: var(--line);
+}
+
+/* ── Active editor indicator ── */
+body.editor-active .site-nav {
+  border-bottom-color: var(--clay);
+}
+
+.editor-badge {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--clay);
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--clay);
+  border-radius: 2px;
+  background: rgba(201,123,74,0.08);
+}
+body.editor-active .editor-badge {
+  display: inline-block;
+}
+
+/* ── Modal backdrop ── */
+.editor-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 21, 26, 0.88);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.editor-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ── Modal card ── */
+.editor-modal__card {
+  background: var(--bg-raised);
+  border: 1px solid var(--clay);
+  border-radius: 3px;
+  padding: var(--space-4);
+  width: min(460px, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transform: translateY(12px);
+  transition: transform 0.25s var(--ease-out);
+}
+.editor-modal.is-open .editor-modal__card {
+  transform: translateY(0);
+}
+
+.editor-modal__card--wide {
+  width: min(640px, calc(100vw - 2rem));
+}
+
+.editor-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.editor-modal__title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wire);
+}
+
+.editor-modal__close {
+  background: transparent;
+  border: none;
+  color: var(--ink-dim);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+.editor-modal__close:hover { color: var(--clay); }
+
+/* ── Form fields ── */
+.editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.editor-field label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wire);
+}
+
+.editor-field input,
+.editor-field textarea,
+.editor-field select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  transition: border-color 0.2s ease;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.editor-field input:focus,
+.editor-field textarea:focus,
+.editor-field select:focus {
+  border-color: var(--clay);
+}
+.editor-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+.editor-field select {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239A978F' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.8rem center;
+  padding-right: 2rem;
+}
+
+.editor-field__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+/* ── Login error message ── */
+.editor-error {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: #e05a5a;
+  display: none;
+}
+.editor-error.is-visible { display: block; }
+
+/* Shake animation on failed login */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+.editor-modal__card.shake {
+  animation: shake 0.35s ease;
+}
+
+/* ── Submit / action buttons ── */
+.editor-btn {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.75rem 1.8rem;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+.editor-btn--primary {
+  background: var(--clay);
+  color: var(--bg);
+  border: 1px solid var(--clay);
+}
+.editor-btn--primary:hover {
+  background: var(--clay-dim);
+  border-color: var(--clay-dim);
+}
+.editor-btn--ghost {
+  background: transparent;
+  color: var(--ink-dim);
+  border: 1px solid var(--line);
+}
+.editor-btn--ghost:hover {
+  border-color: var(--clay);
+  color: var(--clay);
+}
+
+.editor-btn-row {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+  margin-top: var(--space-1);
+}
+
+/* ── Upload dropzone ── */
+.upload-dropzone {
+  border: 1px dashed var(--clay);
+  border-radius: 3px;
+  padding: var(--space-4);
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+.upload-dropzone:hover,
+.upload-dropzone.drag-over {
+  background: rgba(201,123,74,0.06);
+  border-style: solid;
+}
+.upload-dropzone__icon {
+  font-size: 1.6rem;
+  color: var(--clay);
+  line-height: 1;
+}
+.upload-dropzone__label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+.upload-dropzone__sub {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--wire);
+}
+.upload-dropzone__filename {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--clay);
+  display: none;
+}
+.upload-dropzone.has-file .upload-dropzone__filename { display: block; }
+.upload-dropzone.has-file .upload-dropzone__label,
+.upload-dropzone.has-file .upload-dropzone__sub { display: none; }
+
+/* ── "Add Content" button (hidden until editor-active) ── */
+.add-content-btn {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.55rem 1.2rem;
+  background: transparent;
+  border: 1px dashed var(--clay);
+  border-radius: 2px;
+  color: var(--clay);
+  cursor: pointer;
+  margin-bottom: var(--space-3);
+  transition: background 0.2s ease;
+}
+.add-content-btn:hover { background: rgba(201,123,74,0.08); }
+body.editor-active .add-content-btn { display: inline-flex; }
+
+/* ── Per-card editor overlay ── */
+.project-card {
+  position: relative; /* ensure overlay positions correctly */
+}
+
+.card-editor-controls {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: none;
+  gap: 0.4rem;
+  z-index: 5;
+}
+
+body.editor-active .project-card[data-dynamic] .card-editor-controls {
+  display: flex;
+}
+
+/* Show controls on card hover too */
+body.editor-active .project-card[data-dynamic]:hover .card-editor-controls {
+  display: flex;
+}
+
+.card-ctrl-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-dim);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.card-ctrl-btn:hover { background: var(--bg-raised); }
+.card-ctrl-btn--edit:hover { border-color: var(--clay); color: var(--clay); }
+.card-ctrl-btn--delete:hover { border-color: #e05a5a; color: #e05a5a; }
+
+/* ── FBX canvas inside project card thumb ── */
+.project-card__thumb canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ── Image inside project card thumb ── */
+.project-card__thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Post row editor controls ── */
+.post-row,
+.post-featured {
+  position: relative;
+}
+
+.post-editor-controls {
+  position: absolute;
+  top: var(--space-2);
+  right: 0;
+  display: none;
+  gap: 0.4rem;
+}
+body.editor-active .post-row[data-dynamic] .post-editor-controls,
+body.editor-active .post-featured[data-dynamic] .post-editor-controls {
+  display: flex;
+}
+
+/* ── Logout button (replaces edit key when active) ── */
+.editor-logout {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.editor-logout:hover { color: #e05a5a; border-color: #e05a5a; }
+body.editor-active .editor-logout { display: inline-block; }
+body.editor-active .editor-key:not(.editor-key--fixed) { display: none; }
