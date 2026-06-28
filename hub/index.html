@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GuanYu — Studio Index</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/inner.css">
+  <style>
+    .hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-3);
+      max-width: 860px;
+    }
+
+    .hub-card {
+      display: block;
+      padding: var(--space-4);
+      background: var(--bg-raised);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.25s ease, transform 0.25s var(--ease-out);
+    }
+    .hub-card:hover {
+      border-color: var(--clay);
+      transform: translateY(-3px);
+    }
+    .hub-card:hover .hub-card__arrow { color: var(--clay); transform: translateX(4px); }
+
+    .hub-card__eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--wire);
+      margin-bottom: var(--space-2);
+      display: block;
+    }
+
+    .hub-card__title {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.1;
+      margin: 0 0 var(--space-2);
+    }
+
+    .hub-card__desc {
+      font-size: 0.9rem;
+      color: var(--ink-dim);
+      line-height: 1.6;
+      margin-bottom: var(--space-3);
+    }
+
+    .hub-card__arrow {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.06em;
+      color: var(--ink-dim);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: color 0.2s ease, transform 0.2s var(--ease-out);
+    }
+
+    .hub-card__count {
+      float: right;
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 400;
+      color: var(--line);
+      line-height: 1;
+    }
+  </style>
+</head>
+<body class="page-shell">
+
+  <nav class="site-nav">
+    <a href="../" class="site-nav__back">← Intro</a>
+    <span class="site-nav__label">Studio Index</span>
+  </nav>
+
+  <header class="page-hero">
+    <span class="mono-label">guanyu — studio index</span>
+    <h1 class="page-hero__title">You made it.</h1>
+    <p class="page-hero__sub">Welcome to the studio. Pick a room.</p>
+  </header>
+
+  <div class="page-content">
+    <div class="hub-grid">
+
+      <a href="../3d-projects/" class="hub-card">
+        <span class="hub-card__count">06</span>
+        <span class="hub-card__eyebrow">01 — render</span>
+        <h2 class="hub-card__title">3D Projects</h2>
+        <p class="hub-card__desc">Characters, environments, and objects. Built in Blender, exported to Unity and beyond.</p>
+        <span class="hub-card__arrow">View projects →</span>
+      </a>
+
+      <a href="../blog/" class="hub-card">
+        <span class="hub-card__count">05</span>
+        <span class="hub-card__eyebrow">02 — write</span>
+        <h2 class="hub-card__title">Writing</h2>
+        <p class="hub-card__desc">Notes on 3D craft, real-time rendering, tools, and the slow work of getting better.</p>
+        <span class="hub-card__arrow">Read posts →</span>
+      </a>
+
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span class="site-footer__copy">© 2025 GuanYu</span>
+    <nav class="site-footer__links">
+      <a href="https://github.com/ChinGuanyu" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:guanyu1253@gmail.com">Email</a>
+    </nav>
+  </footer>
+
+</body>
+</html>

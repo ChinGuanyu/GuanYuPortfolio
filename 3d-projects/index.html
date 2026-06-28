@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GuanYu — 3D Projects</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/inner.css">
+  <style>
+    /* ── Filter bar ── */
+    .filter-bar {
+      display: flex;
+      gap: var(--space-1);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-4);
+    }
+
+    .filter-btn {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.45rem 1rem;
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      color: var(--ink-dim);
+      cursor: pointer;
+      transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+    }
+    .filter-btn:hover,
+    .filter-btn.is-active {
+      border-color: var(--clay);
+      color: var(--clay);
+    }
+    .filter-btn.is-active {
+      background: rgba(201, 123, 74, 0.08);
+    }
+
+    /* ── Project grid ── */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: var(--space-3);
+    }
+
+    .project-card {
+      background: var(--bg-raised);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      overflow: hidden;
+      transition: border-color 0.25s ease, transform 0.25s var(--ease-out);
+      cursor: pointer;
+    }
+    .project-card:hover {
+      border-color: var(--clay);
+      transform: translateY(-3px);
+    }
+
+    /* Placeholder thumbnail — replaced by real <img> when assets are ready */
+    .project-card__thumb {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+    .project-card__thumb::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 35% 40%, rgba(201,123,74,0.18) 0%, transparent 65%);
+    }
+
+    /* Subtle wireframe grid overlay to evoke the viewport aesthetic */
+    .project-card__thumb::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 32px 32px;
+      opacity: 0.4;
+    }
+
+    /* Each card gets a unique accent colour via its data-hue attribute */
+    .project-card[data-hue="wire"] .project-card__thumb::after {
+      background: radial-gradient(ellipse at 60% 50%, rgba(91,122,134,0.25) 0%, transparent 65%);
+    }
+    .project-card[data-hue="dim"] .project-card__thumb::after {
+      background: radial-gradient(ellipse at 50% 30%, rgba(154,151,143,0.15) 0%, transparent 65%);
+    }
+
+    .project-card__label {
+      position: absolute;
+      bottom: var(--space-2);
+      left: var(--space-2);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--wire);
+      z-index: 1;
+    }
+
+    .project-card__body {
+      padding: var(--space-3);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+
+    .project-card__meta {
+      font-size: 0.7rem;
+    }
+
+    .project-card__title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin: 0;
+    }
+
+    .project-card__desc {
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--ink-dim);
+    }
+
+    .project-card__tags {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-top: var(--space-1);
+    }
+
+    .tag {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.55rem;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      color: var(--ink-dim);
+    }
+
+    /* ── Hidden state for filter ── */
+    .project-card.is-hidden {
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      .project-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="page-shell">
+
+  <nav class="site-nav">
+    <a href="../hub/" class="site-nav__back">← Studio</a>
+    <span class="site-nav__label">3D Projects</span>
+  </nav>
+
+  <header class="page-hero">
+    <span class="mono-label">selected work — 2022–2025</span>
+    <h1 class="page-hero__title">The Work.</h1>
+    <p class="page-hero__sub">Characters, environments, and objects built in Blender and Unity. Every piece started as a sketch, then clay, then polygons.</p>
+  </header>
+
+  <div class="page-content">
+    <div class="filter-bar" role="group" aria-label="Filter projects by category">
+      <button class="filter-btn is-active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="character">Character</button>
+      <button class="filter-btn" data-filter="environment">Environment</button>
+      <button class="filter-btn" data-filter="product">Product</button>
+      <button class="filter-btn" data-filter="motion">Motion</button>
+    </div>
+
+    <section class="project-grid" id="project-grid">
+
+      <article class="project-card" data-category="character" data-hue="clay">
+        <div class="project-card__thumb">
+          <span class="project-card__label">// mesh_07.blend</span>
+        </div>
+        <div class="project-card__body">
+          <p class="mono-label project-card__meta">Character — 2025</p>
+          <h2 class="project-card__title">Clay Figure No. 7</h2>
+          <p class="project-card__desc">Low-poly stylised character study exploring facial topology and three-point rim-light shading.</p>
+          <div class="project-card__tags">
+            <span class="tag">Blender</span>
+            <span class="tag">Cycles</span>
+            <span class="tag">Rigging</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="project-card" data-category="environment" data-hue="wire">
+        <div class="project-card__thumb">
+          <span class="project-card__label">// env_studio.blend</span>
+        </div>
+        <div class="project-card__body">
+          <p class="mono-label project-card__meta">Environment — 2025</p>
+          <h2 class="project-card__title">Quiet Studio</h2>
+          <p class="project-card__desc">Interior scene with procedural plaster walls and hand-painted light leaks. Inspired by early-morning workshop lighting.</p>
+          <div class="project-card__tags">
+            <span class="tag">Blender</span>
+            <span class="tag">EEVEE</span>
+            <span class="tag">Lighting</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="project-card" data-category="product" data-hue="clay">
+        <div class="project-card__thumb">
+          <span class="project-card__label">// product_01.blend</span>
+        </div>
+        <div class="project-card__body">
+          <p class="mono-label project-card__meta">Product — 2024</p>
+          <h2 class="project-card__title">Ceramic Vessel</h2>
+          <p class="project-card__desc">Product visualisation for a hand-thrown ceramic series. PBR material built from real-world glaze scans.</p>
+          <div class="project-card__tags">
+            <span class="tag">Blender</span>
+            <span class="tag">Substance</span>
+            <span class="tag">PBR</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="project-card" data-category="character" data-hue="dim">
+        <div class="project-card__thumb">
+          <span class="project-card__label">// npc_warden.blend</span>
+        </div>
+        <div class="project-card__body">
+          <p class="mono-label project-card__meta">Character — 2024</p>
+          <h2 class="project-card__title">The Warden</h2>
+          <p class="project-card__desc">Game-ready NPC for a student project. Optimised to under 8k tris with a single 2K atlas for Unity.</p>
+          <div class="project-card__tags">
+            <span class="tag">Blender</span>
+            <span class="tag">Unity</span>
+            <span class="tag">Game-ready</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="project-card" data-category="motion" data-hue="wire">
+        <div class="project-card__thumb">
+          <span class="project-card__label">// anim_loop.blend</span>
+        </div>
+        <div class="project-card__body">
+          <p class="mono-label project-card__meta">Motion — 2024</p>
+          <h2 class="project-card__title">Gravity Loop</h2>
+          <p class="project-card__desc">12-second seamlessly looping animation of an abstract form dissolving and reforming. Rendered in Cycles at 4K.</p>
+          <div class="project-card__tags">
+            <span class="tag">Blender</span>
+            <span class="tag">Geometry Nodes</span>
+            <span class="tag">Cycles</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="project-card" data-category="environment" data-hue="clay">
+        <div class="project-card__thumb">
+          <span class="project-card__label">// env_brutalist.blend</span>
+        </div>
+        <div class="project-card__body">
+          <p class="mono-label project-card__meta">Environment — 2023</p>
+          <h2 class="project-card__title">Brutalist Corner</h2>
+          <p class="project-card__desc">Architectural fragment study. Raw concrete material driven by noise-based displacement and edge weathering.</p>
+          <div class="project-card__tags">
+            <span class="tag">Blender</span>
+            <span class="tag">Displacement</span>
+            <span class="tag">HDRI</span>
+          </div>
+        </div>
+      </article>
+
+    </section>
+  </div>
+
+  <footer class="site-footer">
+    <span class="site-footer__copy">© 2025 GuanYu — All renders reserved</span>
+    <nav class="site-footer__links">
+      <a href="https://github.com/ChinGuanyu" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:guanyu1253@gmail.com">Email</a>
+      <a href="../hub/">Hub</a>
+    </nav>
+  </footer>
+
+  <script>
+    const btns = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.project-card');
+
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        btns.forEach(b => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        const filter = btn.dataset.filter;
+        cards.forEach(card => {
+          if (filter === 'all' || card.dataset.category === filter) {
+            card.classList.remove('is-hidden');
+          } else {
+            card.classList.add('is-hidden');
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

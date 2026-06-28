@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GuanYu — Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/intro.css">
+</head>
+<body>
+
+  <!-- Three.js canvas sits fixed behind everything, transparent bg, so the
+       model reads as part of the page rather than a boxed-in viewer -->
+  <canvas id="intro-canvas"></canvas>
+
+  <!-- Tall scroll track. Height is set in JS based on number of "beats". -->
+  <main id="scroll-track">
+
+    <section class="beat" data-beat="0">
+      <p class="mono-label">guanyu — 3d artist &amp; developer</p>
+      <h1 class="hero-title">Things I build<br>have weight.</h1>
+      <p class="scroll-hint">Scroll to look closer ↓</p>
+    </section>
+
+    <section class="beat" data-beat="1">
+      <p class="mono-label">01 — form</p>
+      <h2>Every piece starts<br>as raw geometry.</h2>
+    </section>
+
+    <section class="beat" data-beat="2">
+      <p class="mono-label">02 — light</p>
+      <h2>Then it learns<br>how to catch light.</h2>
+    </section>
+
+    <section class="beat beat--final" data-beat="3">
+      <p class="mono-label">03 — you're here</p>
+      <h2>Welcome to the studio.</h2>
+      <button id="enter-btn" class="enter-btn" disabled>
+        Enter
+      </button>
+    </section>
+
+  </main>
+
+  <!-- Progress indicator, fixed, shows scroll progress through the intro -->
+  <div class="progress-rail" aria-hidden="true">
+    <div class="progress-rail__fill" id="progress-fill"></div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="js/intro-scene.js"></script>
+</body>
+</html>

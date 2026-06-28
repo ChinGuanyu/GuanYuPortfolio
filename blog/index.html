@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GuanYu — Writing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/inner.css">
+  <style>
+    /* ── Post list ── */
+    .post-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .post-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 2rem;
+      align-items: start;
+      gap: var(--space-3);
+      padding: var(--space-3) 0;
+      border-bottom: 1px solid var(--line);
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.2s ease;
+    }
+    .post-row:first-child { border-top: 1px solid var(--line); }
+    .post-row:hover { border-color: var(--clay); }
+    .post-row:hover .post-row__arrow { color: var(--clay); transform: translateX(4px); }
+    .post-row:hover .post-row__title { color: var(--ink); }
+
+    .post-row__date {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: var(--wire);
+      padding-top: 0.2rem;
+    }
+
+    .post-row__body {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .post-row__tag {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--clay);
+    }
+
+    .post-row__title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.25;
+      transition: color 0.2s ease;
+    }
+
+    .post-row__excerpt {
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--ink-dim);
+    }
+
+    .post-row__arrow {
+      font-size: 1.1rem;
+      color: var(--line);
+      padding-top: 0.15rem;
+      transition: color 0.2s ease, transform 0.2s var(--ease-out);
+    }
+
+    /* ── Reading time badge ── */
+    .post-row__meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: 0.2rem;
+    }
+
+    .read-time {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.06em;
+      color: var(--ink-dim);
+    }
+
+    /* ── Featured post ── */
+    .post-featured {
+      background: var(--bg-raised);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.25s ease, transform 0.25s var(--ease-out);
+    }
+    .post-featured:hover {
+      border-color: var(--clay);
+      transform: translateY(-2px);
+    }
+    .post-featured:hover .post-featured__title { color: var(--ink); }
+
+    .post-featured__eyebrow {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.6rem;
+      background: rgba(201,123,74,0.12);
+      border: 1px solid var(--clay);
+      border-radius: 2px;
+      color: var(--clay);
+    }
+
+    .post-featured__date {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--wire);
+    }
+
+    .post-featured__title {
+      font-family: var(--font-display);
+      font-size: clamp(1.5rem, 3vw, 2.25rem);
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.2;
+      transition: color 0.2s ease;
+    }
+
+    .post-featured__excerpt {
+      font-size: 1rem;
+      color: var(--ink-dim);
+      line-height: 1.65;
+      max-width: 580px;
+    }
+
+    @media (max-width: 600px) {
+      .post-row {
+        grid-template-columns: 1fr 2rem;
+        grid-template-rows: auto auto;
+      }
+      .post-row__date {
+        grid-column: 1 / -1;
+        padding-bottom: 0;
+      }
+    }
+  </style>
+</head>
+<body class="page-shell">
+
+  <nav class="site-nav">
+    <a href="../hub/" class="site-nav__back">← Studio</a>
+    <span class="site-nav__label">Writing</span>
+  </nav>
+
+  <header class="page-hero">
+    <span class="mono-label">notes from the studio</span>
+    <h1 class="page-hero__title">Writing.</h1>
+    <p class="page-hero__sub">Thoughts on 3D art, real-time rendering, and the craft of building things that feel real.</p>
+  </header>
+
+  <div class="page-content">
+
+    <!-- Featured post -->
+    <a href="#" class="post-featured" aria-label="Read: Why I model in clay before I model in Blender">
+      <div class="post-featured__eyebrow">
+        <span class="badge">Latest</span>
+        <time class="post-featured__date" datetime="2025-06-12">12 Jun 2025</time>
+      </div>
+      <h2 class="post-featured__title">Why I model in clay before I model in Blender</h2>
+      <p class="post-featured__excerpt">Physical sketching builds intuition about form, weight, and shadow that no tutorial can replicate. Here's why I keep a block of air-dry clay on my desk.</p>
+      <span class="read-time">7 min read</span>
+    </a>
+
+    <!-- Post list -->
+    <div class="post-list" role="list">
+
+      <a href="#" class="post-row" role="listitem">
+        <time class="post-row__date" datetime="2025-04-08">08 Apr 2025</time>
+        <div class="post-row__body">
+          <span class="post-row__tag">Rendering</span>
+          <h2 class="post-row__title">Getting cinematic light in EEVEE without a render farm</h2>
+          <p class="post-row__excerpt">EEVEE Next rewrote the playbook. Here's my current lighting rig for interior scenes that can render on a laptop.</p>
+          <div class="post-row__meta">
+            <span class="read-time">5 min read</span>
+          </div>
+        </div>
+        <span class="post-row__arrow" aria-hidden="true">→</span>
+      </a>
+
+      <a href="#" class="post-row" role="listitem">
+        <time class="post-row__date" datetime="2025-02-20">20 Feb 2025</time>
+        <div class="post-row__body">
+          <span class="post-row__tag">Unity</span>
+          <h2 class="post-row__title">Bridging Blender to Unity: a workflow with no surprises</h2>
+          <p class="post-row__excerpt">Scale, axis, normals, and texture packing — the four things that bite every Blender artist the first time they export to a game engine.</p>
+          <div class="post-row__meta">
+            <span class="read-time">9 min read</span>
+          </div>
+        </div>
+        <span class="post-row__arrow" aria-hidden="true">→</span>
+      </a>
+
+      <a href="#" class="post-row" role="listitem">
+        <time class="post-row__date" datetime="2024-11-03">03 Nov 2024</time>
+        <div class="post-row__body">
+          <span class="post-row__tag">Geometry Nodes</span>
+          <h2 class="post-row__title">Geometry Nodes for artists, not programmers</h2>
+          <p class="post-row__excerpt">A node-by-node breakdown of how I built a procedural scatter system without writing a single line of Python.</p>
+          <div class="post-row__meta">
+            <span class="read-time">12 min read</span>
+          </div>
+        </div>
+        <span class="post-row__arrow" aria-hidden="true">→</span>
+      </a>
+
+      <a href="#" class="post-row" role="listitem">
+        <time class="post-row__date" datetime="2024-08-15">15 Aug 2024</time>
+        <div class="post-row__body">
+          <span class="post-row__tag">Career</span>
+          <h2 class="post-row__title">Building a portfolio when you have no clients yet</h2>
+          <p class="post-row__excerpt">Self-directed projects, briefs from strangers, and the trick of treating spec work as if a real client is watching.</p>
+          <div class="post-row__meta">
+            <span class="read-time">6 min read</span>
+          </div>
+        </div>
+        <span class="post-row__arrow" aria-hidden="true">→</span>
+      </a>
+
+      <a href="#" class="post-row" role="listitem">
+        <time class="post-row__date" datetime="2024-05-02">02 May 2024</time>
+        <div class="post-row__body">
+          <span class="post-row__tag">Tools</span>
+          <h2 class="post-row__title">The $0 texture pipeline: from phone photo to PBR material</h2>
+          <p class="post-row__excerpt">Using your phone, a free photogrammetry app, and Blender's node editor to create studio-quality surface materials.</p>
+          <div class="post-row__meta">
+            <span class="read-time">8 min read</span>
+          </div>
+        </div>
+        <span class="post-row__arrow" aria-hidden="true">→</span>
+      </a>
+
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span class="site-footer__copy">© 2025 GuanYu — Written slowly, published eventually</span>
+    <nav class="site-footer__links">
+      <a href="https://github.com/ChinGuanyu" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:guanyu1253@gmail.com">Email</a>
+      <a href="../hub/">Hub</a>
+    </nav>
+  </footer>
+
+</body>
+</html>
