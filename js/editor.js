@@ -1,17 +1,14 @@
 // js/editor.js
-// Browser-based CMS editor.
+// Browser-based CMS editor for the portfolio.
 // Access: Ctrl+Shift+E to open login (no visible button)
-// Auth:   tester / 123
-// Data:   localStorage["gyu_meta"] + IndexedDB["gyu_files"]
+// Backend: see store.js — Supabase when configured, browser-only otherwise.
 
-const CREDS      = { user: 'tester', pass: '123' };
-const SESSION_KEY = 'gyu_editor';
-const META_KEY    = 'gyu_meta';
-const CV_KEY      = 'gyu_cv';
-const TEXT_KEY    = 'gyu_text';   // per-page inline text overrides
-const CARDS_KEY   = 'gyu_cards';  // per static-card overrides (media/tags/deleted)
-const IDB_NAME    = 'gyu_files';
-const IDB_STORE   = 'files';
+import * as db from './store.js';
+
+const META_KEY  = 'gyu_meta';
+const CV_KEY    = 'gyu_cv';
+const TEXT_KEY  = 'gyu_text';   // per-page inline text overrides
+const CARDS_KEY = 'gyu_cards';  // per static-card overrides (media/tags/deleted)
 
 const PAGE = (() => {
   const p = location.pathname;
@@ -22,45 +19,14 @@ const PAGE = (() => {
   return 'intro';
 })();
 
-// ─── IndexedDB ───────────────────────────────────────────────
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror   = e => reject(e.target.error);
-  });
-}
-async function saveFile(id, blob) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).put({ id, blob });
-    tx.oncomplete = resolve;
-    tx.onerror    = e => reject(e.target.error);
-  });
-}
-async function loadFile(id) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(id);
-    req.onsuccess = e => resolve(e.result ? e.result.blob : null);
-    req.onerror   = e => reject(e.target.error);
-  });
-}
-async function deleteFile(id) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).delete(id);
-    tx.oncomplete = resolve;
-    tx.onerror    = e => reject(e.target.error);
-  });
-}
+// ─── Files (delegated to the data layer) ─────────────────────
+const saveFile   = (id, blob) => db.uploadMedia(id, blob);
+const loadFile   = (id)       => db.loadMedia(id);
+const deleteFile = (id)       => db.removeMedia(id);
 
 // ─── Metadata ────────────────────────────────────────────────
-function loadMeta()           { try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; } }
-function saveMeta(m)          { localStorage.setItem(META_KEY, JSON.stringify(m)); }
+function loadMeta()           { return db.getContent(META_KEY, {}); }
+function saveMeta(m)          { db.setContent(META_KEY, m); }
 function getPageEntries(p)    { return loadMeta()[p] || []; }
 function savePageEntry(p, e)  {
   const m = loadMeta();
@@ -73,8 +39,8 @@ function deletePageEntry(p,id){ const m=loadMeta(); if(m[p]) m[p]=m[p].filter(e=
 function genId()              { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
 // ─── Inline text editing (page titles, descriptions, static cards) ──
-function loadTextStore()  { try { return JSON.parse(localStorage.getItem(TEXT_KEY) || '{}'); } catch { return {}; } }
-function saveTextStore(s) { localStorage.setItem(TEXT_KEY, JSON.stringify(s)); }
+function loadTextStore()  { return db.getContent(TEXT_KEY, {}); }
+function saveTextStore(s) { db.setContent(TEXT_KEY, s); }
 
 // Tag elements as inline-editable, assign stable keys, apply saved overrides.
 function initInlineText() {
@@ -137,8 +103,8 @@ function disableInlineEditing() {
 }
 
 // ─── Static project-card overrides (delete / media / tags) ──────
-function loadCards()                 { try { return JSON.parse(localStorage.getItem(CARDS_KEY) || '{}'); } catch { return {}; } }
-function saveCards(c)                { localStorage.setItem(CARDS_KEY, JSON.stringify(c)); }
+function loadCards()                 { return db.getContent(CARDS_KEY, {}); }
+function saveCards(c)                { db.setContent(CARDS_KEY, c); }
 function getCardOverride(page, key)  { const c = loadCards(); return (c[page] && c[page][key]) || {}; }
 function setCardOverride(page, key, patch) {
   const c = loadCards();
@@ -148,11 +114,12 @@ function setCardOverride(page, key, patch) {
 }
 const staticFileId = key => `static-3d-projects-${key}`;
 
-// Render a media blob (image or fbx) into a card thumb
-async function applyCardMedia(card, key, media) {
+// Render a media blob (image or fbx) into a card thumb.
+// Pass `blob` to render directly (e.g. just-uploaded file); otherwise it loads.
+async function applyCardMedia(card, key, media, blob = null) {
   const thumb = card.querySelector('.project-card__thumb');
   if (!thumb || !media) return;
-  const blob = await loadFile(staticFileId(key));
+  if (!blob) blob = await loadFile(staticFileId(key));
   if (!blob) return;
 
   thumb.querySelectorAll('canvas, img.thumb-media').forEach(n => n.remove());
@@ -232,7 +199,7 @@ function setupStaticCardControls(card, key) {
       const media = { type: file.name.toLowerCase().endsWith('.fbx') ? 'fbx' : 'image', fileName: file.name };
       await saveFile(staticFileId(key), file);
       setCardOverride('3d-projects', key, { media });
-      await applyCardMedia(card, key, media);
+      await applyCardMedia(card, key, media, file);
     });
     remove.addEventListener('click', async e => {
       e.stopPropagation();
@@ -325,13 +292,11 @@ function disableTagEditing() {
 }
 
 // ─── Auth ────────────────────────────────────────────────────
-function isEditorActive() { return sessionStorage.getItem(SESSION_KEY) === '1'; }
+function isEditorActive() { return db.isLoggedIn(); }
 function activateEditor() {
-  sessionStorage.setItem(SESSION_KEY, '1');
   document.body.classList.add('editor-active');
 }
 function deactivateEditor() {
-  sessionStorage.removeItem(SESSION_KEY);
   document.body.classList.remove('editor-active');
   // Disable contenteditable on CV page
   document.querySelectorAll('.cv-field').forEach(el => {
@@ -362,34 +327,33 @@ function buildModal(id, titleText, wide = false) {
 function openModal(modal)  { modal.classList.add('is-open'); const f = modal.querySelector('input,textarea,select'); if(f) setTimeout(()=>f.focus(),50); }
 function closeModal(modal) { modal.classList.remove('is-open'); }
 
-// ─── Login modal ─────────────────────────────────────────────
+// ─── Login modal (single shared password) ────────────────────
 function buildLoginModal() {
   const modal = buildModal('editor-login-modal', 'Studio Access');
   const body = modal.querySelector('.editor-modal__body');
   body.innerHTML = `
     <form class="editor-form" id="editor-login-form" novalidate>
       <div class="editor-field">
-        <label for="ed-user">Username</label>
-        <input id="ed-user" type="text" autocomplete="username" spellcheck="false">
-      </div>
-      <div class="editor-field">
         <label for="ed-pass">Password</label>
         <input id="ed-pass" type="password" autocomplete="current-password">
       </div>
-      <p class="editor-error" id="editor-login-error">Incorrect credentials.</p>
+      <p class="editor-error" id="editor-login-error">Incorrect password.</p>
       <div class="editor-btn-row">
         <button type="submit" class="editor-btn editor-btn--primary">Enter Studio</button>
       </div>
     </form>`;
-  document.getElementById('editor-login-form').addEventListener('submit', e => {
+  body.querySelector('#editor-login-form').addEventListener('submit', async e => {
     e.preventDefault();
-    const user = document.getElementById('ed-user').value.trim();
-    const pass = document.getElementById('ed-pass').value;
-    if (user === CREDS.user && pass === CREDS.pass) {
+    const passEl = document.getElementById('ed-pass');
+    const submit = modal.querySelector('button[type="submit"]');
+    submit.disabled = true; submit.textContent = 'Checking…';
+    const { ok } = await db.signIn(passEl.value);
+    submit.disabled = false; submit.textContent = 'Enter Studio';
+    if (ok) {
       closeModal(modal);
-      activateEditor();
-      document.getElementById('ed-user').value = '';
-      document.getElementById('ed-pass').value = '';
+      passEl.value = '';
+      document.getElementById('editor-login-error').classList.remove('is-visible');
+      activateEditorFull();
     } else {
       const card = modal.querySelector('.editor-modal__card');
       card.classList.remove('shake');
@@ -399,18 +363,6 @@ function buildLoginModal() {
     }
   });
   return modal;
-}
-
-// ─── Keyboard shortcut (Ctrl+Shift+E) ────────────────────────
-function registerKeyboardShortcut() {
-  const loginModal = buildLoginModal();
-  document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
-      e.preventDefault();
-      if (isEditorActive()) deactivateEditor();
-      else openModal(loginModal);
-    }
-  });
 }
 
 // ─── Nav badge & logout ──────────────────────────────────────
@@ -426,12 +378,11 @@ function injectNavControls() {
     nav.appendChild(badge);
   }
 
-  // Logout
+  // Logout (click handler wired centrally in init)
   if (!nav.querySelector('.editor-logout')) {
     const logout = document.createElement('button');
     logout.className = 'editor-logout';
     logout.textContent = 'Exit Editor';
-    logout.addEventListener('click', deactivateEditor);
     nav.appendChild(logout);
   }
 }
@@ -912,13 +863,11 @@ function openAddPostModal(prefill = null) {
 // ─── CV editing ───────────────────────────────────────────────
 function loadCV() {
   if (PAGE !== 'cv') return;
-  try {
-    const data = JSON.parse(localStorage.getItem(CV_KEY) || '{}');
-    document.querySelectorAll('.cv-field').forEach(el => {
-      const key = el.dataset.field;
-      if (data[key] !== undefined) el.innerHTML = data[key];
-    });
-  } catch {}
+  const data = db.getContent(CV_KEY, {}) || {};
+  document.querySelectorAll('.cv-field').forEach(el => {
+    const key = el.dataset.field;
+    if (data[key] !== undefined) el.innerHTML = data[key];
+  });
 
   // Photo
   loadFile('cv-photo').then(blob => {
@@ -948,7 +897,7 @@ function saveCV() {
   document.querySelectorAll('.cv-field').forEach(el => {
     data[el.dataset.field] = el.innerHTML;
   });
-  localStorage.setItem(CV_KEY, JSON.stringify(data));
+  db.setContent(CV_KEY, data);
   const btn = document.getElementById('cv-save-btn');
   if (btn) { btn.textContent = 'Saved ✓'; setTimeout(() => { btn.textContent = 'Save CV'; }, 2000); }
 }
@@ -1013,11 +962,7 @@ function wireCV() {
     if (placeholder) placeholder.style.display = 'none';
   });
 
-  // Logout on cv page
-  document.querySelector('.editor-logout')?.addEventListener('click', () => {
-    deactivateEditor();
-    disableCVEditing();
-  });
+  // (Logout is wired centrally in init for every .editor-logout button.)
 }
 
 // ─── Watch editor-active state changes ───────────────────────
@@ -1040,39 +985,16 @@ function deactivateEditorFull() {
 
 // ─── Init ────────────────────────────────────────────────────
 async function init() {
-  // Restore editor session (inline editing enabled after content renders, below)
-  if (isEditorActive()) {
-    document.body.classList.add('editor-active');
-  }
+  // Bring up the data layer first (loads cloud content into cache, restores session)
+  await db.initStore();
 
-  // Override activate/deactivate with CV-aware versions
   const loginModal = buildLoginModal();
-  // Patch login form submit to use full activate
-  const loginForm = document.getElementById('editor-login-form');
-  if (loginForm) {
-    loginForm.removeEventListener('submit', loginForm._handler);
-    loginForm.addEventListener('submit', e => {
-      e.preventDefault();
-      const user = document.getElementById('ed-user').value.trim();
-      const pass = document.getElementById('ed-pass').value;
-      if (user === CREDS.user && pass === CREDS.pass) {
-        closeModal(loginModal);
-        activateEditorFull();
-        document.getElementById('ed-user').value = '';
-        document.getElementById('ed-pass').value = '';
-      } else {
-        const card = loginModal.querySelector('.editor-modal__card');
-        card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
-        document.getElementById('editor-login-error').classList.add('is-visible');
-      }
-    });
-  }
 
-  // Keyboard shortcut
+  // Keyboard shortcut to open login / toggle editor
   document.addEventListener('keydown', e => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
       e.preventDefault();
-      if (isEditorActive()) deactivateEditorFull();
+      if (isEditorActive()) { db.signOut(); deactivateEditorFull(); }
       else openModal(loginModal);
     }
   });
@@ -1080,10 +1002,13 @@ async function init() {
   // Nav controls (badge + logout) on pages that have .site-nav
   injectNavControls();
 
-  // Patch logout buttons on all pages
+  // Wire any pre-existing logout buttons (e.g. hardcoded on the CV page)
   document.querySelectorAll('.editor-logout').forEach(btn => {
-    btn.addEventListener('click', deactivateEditorFull);
+    btn.addEventListener('click', () => { db.signOut(); deactivateEditorFull(); });
   });
+
+  // React to the session ending elsewhere (token expiry, sign-out on another tab)
+  db.onAuthChange(active => { if (!active) deactivateEditorFull(); });
 
   // Page-specific setup
   if (PAGE === '3d-projects') {
@@ -1107,13 +1032,9 @@ async function init() {
   }
 
   // Tag editable text (page titles/descriptions, static cards) and apply
-  // saved overrides for everyone; turn on editing if a session is active.
+  // saved overrides for everyone; turn on editing if already logged in.
   initInlineText();
-  if (isEditorActive()) {
-    enableInlineEditing();
-    enableTagEditing();
-    if (PAGE === 'cv') enableCVEditing();
-  }
+  if (isEditorActive()) activateEditorFull();
 }
 
 init();
