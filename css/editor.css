@@ -4,34 +4,12 @@
   or for always-visible elements like .editor-key.
 */
 
-/* ── Edit key button (always visible, top-right of nav) ── */
-.editor-key {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  color: var(--wire);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 2px;
-  padding: 0.35rem 0.7rem;
-  cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease;
-  flex-shrink: 0;
-}
-.editor-key:hover {
-  color: var(--clay);
-  border-color: var(--clay);
-}
-
-/* On intro page the edit key is fixed bottom-right (no .site-nav) */
-.editor-key--fixed {
-  position: fixed;
-  bottom: var(--space-3);
-  right: var(--space-3);
-  z-index: 10;
-  background: var(--bg);
-  border-color: var(--line);
-}
+/*
+  Edit key removed from visible UI.
+  Access editor via: Ctrl+Shift+E
+  (no visible button — site stays clean for visitors)
+*/
+.editor-key { display: none; }
 
 /* ── Active editor indicator ── */
 body.editor-active .site-nav {
@@ -393,4 +371,127 @@ body.editor-active .post-featured[data-dynamic] .post-editor-controls {
 }
 .editor-logout:hover { color: #e05a5a; border-color: #e05a5a; }
 body.editor-active .editor-logout { display: inline-block; }
-body.editor-active .editor-key:not(.editor-key--fixed) { display: none; }
+
+/* ── Project cards are always clickable (detail view for all visitors) ── */
+.project-card {
+  cursor: pointer;
+}
+
+/* ── Project detail modal ── */
+.detail-modal__card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  max-height: 90vh;
+  width: min(760px, calc(100vw - 2rem));
+}
+
+.detail-modal__preview {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Wireframe grid for static card previews */
+.detail-modal__preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.detail-modal__preview--clay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 35% 40%, rgba(201,123,74,0.22) 0%, transparent 65%);
+}
+.detail-modal__preview--wire::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 60% 50%, rgba(91,122,134,0.28) 0%, transparent 65%);
+}
+.detail-modal__preview--dim::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 30%, rgba(154,151,143,0.18) 0%, transparent 65%);
+}
+
+.detail-modal__file-label {
+  position: absolute;
+  bottom: var(--space-2);
+  left: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wire);
+  z-index: 1;
+}
+
+.detail-modal__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.detail-modal__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.detail-modal__body {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detail-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.detail-modal__meta {
+  font-size: 0.7rem;
+  margin-bottom: 0.3rem;
+}
+
+.detail-modal__title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.15;
+}
+
+.detail-modal__desc {
+  font-size: 0.95rem;
+  color: var(--ink-dim);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.detail-modal__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}

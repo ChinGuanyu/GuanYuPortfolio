@@ -1,41 +1,34 @@
 // js/editor.js
-// Browser-based CMS editor for GuanYuPortfolio.
-// Auth: tester / 123  (sessionStorage-based, resets on tab close)
-// Metadata: localStorage["gyu_meta"]
-// Files:    IndexedDB["gyu_files"] → object store "files"
+// Browser-based CMS editor.
+// Access: Ctrl+Shift+E to open login (no visible button)
+// Auth:   tester / 123
+// Data:   localStorage["gyu_meta"] + IndexedDB["gyu_files"]
 
-// ─────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────
-const CREDS = { user: 'tester', pass: '123' };
+const CREDS      = { user: 'tester', pass: '123' };
 const SESSION_KEY = 'gyu_editor';
-const META_KEY = 'gyu_meta';
-const IDB_NAME = 'gyu_files';
-const IDB_STORE = 'files';
+const META_KEY    = 'gyu_meta';
+const CV_KEY      = 'gyu_cv';
+const IDB_NAME    = 'gyu_files';
+const IDB_STORE   = 'files';
 
-// Detect which page we're on
 const PAGE = (() => {
   const p = location.pathname;
   if (p.includes('3d-projects')) return '3d-projects';
   if (p.includes('blog'))        return 'blog';
   if (p.includes('hub'))         return 'hub';
+  if (p.includes('cv'))          return 'cv';
   return 'intro';
 })();
 
-// ─────────────────────────────────────────────────────────────
-// IndexedDB helpers
-// ─────────────────────────────────────────────────────────────
+// ─── IndexedDB ───────────────────────────────────────────────
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = e => {
-      e.target.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
-    };
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
     req.onsuccess = e => resolve(e.target.result);
     req.onerror   = e => reject(e.target.error);
   });
 }
-
 async function saveFile(id, blob) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -45,17 +38,14 @@ async function saveFile(id, blob) {
     tx.onerror    = e => reject(e.target.error);
   });
 }
-
 async function loadFile(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
-    const req = db.transaction(IDB_STORE, 'readonly')
-                  .objectStore(IDB_STORE).get(id);
+    const req = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(id);
     req.onsuccess = e => resolve(e.result ? e.result.blob : null);
     req.onerror   = e => reject(e.target.error);
   });
 }
-
 async function deleteFile(id) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
@@ -66,65 +56,39 @@ async function deleteFile(id) {
   });
 }
 
-// ─────────────────────────────────────────────────────────────
-// Metadata helpers (localStorage)
-// ─────────────────────────────────────────────────────────────
-function loadMeta() {
-  try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); }
-  catch { return {}; }
+// ─── Metadata ────────────────────────────────────────────────
+function loadMeta()           { try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; } }
+function saveMeta(m)          { localStorage.setItem(META_KEY, JSON.stringify(m)); }
+function getPageEntries(p)    { return loadMeta()[p] || []; }
+function savePageEntry(p, e)  {
+  const m = loadMeta();
+  if (!m[p]) m[p] = [];
+  const i = m[p].findIndex(x => x.id === e.id);
+  if (i >= 0) m[p][i] = e; else m[p].unshift(e);
+  saveMeta(m);
 }
+function deletePageEntry(p,id){ const m=loadMeta(); if(m[p]) m[p]=m[p].filter(e=>e.id!==id); saveMeta(m); }
+function genId()              { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-function saveMeta(meta) {
-  localStorage.setItem(META_KEY, JSON.stringify(meta));
-}
-
-function getPageEntries(page) {
-  return loadMeta()[page] || [];
-}
-
-function savePageEntry(page, entry) {
-  const meta = loadMeta();
-  if (!meta[page]) meta[page] = [];
-  const idx = meta[page].findIndex(e => e.id === entry.id);
-  if (idx >= 0) meta[page][idx] = entry;
-  else meta[page].unshift(entry); // newest first
-  saveMeta(meta);
-}
-
-function deletePageEntry(page, id) {
-  const meta = loadMeta();
-  if (meta[page]) meta[page] = meta[page].filter(e => e.id !== id);
-  saveMeta(meta);
-}
-
-function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-
-// ─────────────────────────────────────────────────────────────
-// Auth
-// ─────────────────────────────────────────────────────────────
-function isEditorActive() {
-  return sessionStorage.getItem(SESSION_KEY) === '1';
-}
-
+// ─── Auth ────────────────────────────────────────────────────
+function isEditorActive() { return sessionStorage.getItem(SESSION_KEY) === '1'; }
 function activateEditor() {
   sessionStorage.setItem(SESSION_KEY, '1');
   document.body.classList.add('editor-active');
 }
-
 function deactivateEditor() {
   sessionStorage.removeItem(SESSION_KEY);
   document.body.classList.remove('editor-active');
+  // Disable contenteditable on CV page
+  document.querySelectorAll('.cv-field').forEach(el => {
+    el.contentEditable = 'false';
+  });
 }
 
-// ─────────────────────────────────────────────────────────────
-// Modal factory
-// ─────────────────────────────────────────────────────────────
+// ─── Modal factory ───────────────────────────────────────────
 function buildModal(id, titleText, wide = false) {
   const existing = document.getElementById(id);
   if (existing) return existing;
-
   const modal = document.createElement('div');
   modal.id = id;
   modal.className = 'editor-modal';
@@ -135,28 +99,16 @@ function buildModal(id, titleText, wide = false) {
         <button class="editor-modal__close" aria-label="Close">×</button>
       </div>
       <div class="editor-modal__body"></div>
-    </div>
-  `;
-
+    </div>`;
   modal.querySelector('.editor-modal__close').addEventListener('click', () => closeModal(modal));
   modal.addEventListener('click', e => { if (e.target === modal) closeModal(modal); });
   document.body.appendChild(modal);
   return modal;
 }
+function openModal(modal)  { modal.classList.add('is-open'); const f = modal.querySelector('input,textarea,select'); if(f) setTimeout(()=>f.focus(),50); }
+function closeModal(modal) { modal.classList.remove('is-open'); }
 
-function openModal(modal) {
-  modal.classList.add('is-open');
-  const first = modal.querySelector('input, textarea, select');
-  if (first) setTimeout(() => first.focus(), 50);
-}
-
-function closeModal(modal) {
-  modal.classList.remove('is-open');
-}
-
-// ─────────────────────────────────────────────────────────────
-// Login modal
-// ─────────────────────────────────────────────────────────────
+// ─── Login modal ─────────────────────────────────────────────
 function buildLoginModal() {
   const modal = buildModal('editor-login-modal', 'Studio Access');
   const body = modal.querySelector('.editor-modal__body');
@@ -174,9 +126,7 @@ function buildLoginModal() {
       <div class="editor-btn-row">
         <button type="submit" class="editor-btn editor-btn--primary">Enter Studio</button>
       </div>
-    </form>
-  `;
-
+    </form>`;
   document.getElementById('editor-login-form').addEventListener('submit', e => {
     e.preventDefault();
     const user = document.getElementById('ed-user').value.trim();
@@ -184,79 +134,197 @@ function buildLoginModal() {
     if (user === CREDS.user && pass === CREDS.pass) {
       closeModal(modal);
       activateEditor();
+      document.getElementById('ed-user').value = '';
+      document.getElementById('ed-pass').value = '';
     } else {
       const card = modal.querySelector('.editor-modal__card');
       card.classList.remove('shake');
-      void card.offsetWidth; // reflow to re-trigger animation
+      void card.offsetWidth;
       card.classList.add('shake');
       document.getElementById('editor-login-error').classList.add('is-visible');
     }
   });
-
   return modal;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Edit-key button injection
-// ─────────────────────────────────────────────────────────────
-function injectEditKey() {
+// ─── Keyboard shortcut (Ctrl+Shift+E) ────────────────────────
+function registerKeyboardShortcut() {
   const loginModal = buildLoginModal();
-
-  if (PAGE === 'intro') {
-    // Intro has no .site-nav — render as fixed button
-    const btn = document.createElement('button');
-    btn.className = 'editor-key editor-key--fixed';
-    btn.title = 'Editor login';
-    btn.textContent = '✎';
-    btn.addEventListener('click', () => {
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+      e.preventDefault();
       if (isEditorActive()) deactivateEditor();
       else openModal(loginModal);
-    });
-    document.body.appendChild(btn);
-    return;
-  }
+    }
+  });
+}
 
+// ─── Nav badge & logout ──────────────────────────────────────
+function injectNavControls() {
   const nav = document.querySelector('.site-nav');
   if (!nav) return;
 
-  const badge = document.createElement('span');
-  badge.className = 'editor-badge';
-  badge.textContent = 'Editing';
+  // Badge
+  if (!nav.querySelector('.editor-badge')) {
+    const badge = document.createElement('span');
+    badge.className = 'editor-badge';
+    badge.textContent = 'Editing';
+    nav.appendChild(badge);
+  }
 
-  const logout = document.createElement('button');
-  logout.className = 'editor-logout';
-  logout.textContent = 'Exit Editor';
-  logout.addEventListener('click', deactivateEditor);
-
-  const editKey = document.createElement('button');
-  editKey.className = 'editor-key';
-  editKey.title = 'Editor login';
-  editKey.textContent = '✎ Edit';
-  editKey.addEventListener('click', () => openModal(loginModal));
-
-  nav.appendChild(badge);
-  nav.appendChild(logout);
-  nav.appendChild(editKey);
+  // Logout
+  if (!nav.querySelector('.editor-logout')) {
+    const logout = document.createElement('button');
+    logout.className = 'editor-logout';
+    logout.textContent = 'Exit Editor';
+    logout.addEventListener('click', deactivateEditor);
+    nav.appendChild(logout);
+  }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Project card builder
-// ─────────────────────────────────────────────────────────────
+// ─── "Add Content" button ────────────────────────────────────
+function injectAddContentBtn() {
+  if (PAGE === '3d-projects') {
+    const filterBar = document.querySelector('.filter-bar');
+    if (!filterBar || filterBar.nextElementSibling?.classList.contains('add-content-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'add-content-btn';
+    btn.innerHTML = '+ Add Project';
+    btn.addEventListener('click', () => openUploadModal());
+    filterBar.after(btn);
+  }
+  if (PAGE === 'blog') {
+    const list = document.querySelector('.post-list');
+    if (!list || list.previousElementSibling?.classList.contains('add-content-btn')) return;
+    const btn = document.createElement('button');
+    btn.className = 'add-content-btn';
+    btn.innerHTML = '+ Add Post';
+    btn.addEventListener('click', () => openAddPostModal());
+    list.before(btn);
+  }
+}
+
+// ─── Project detail modal ────────────────────────────────────
+function buildDetailModal() {
+  const modal = document.createElement('div');
+  modal.id = 'project-detail-modal';
+  modal.className = 'editor-modal detail-modal';
+  modal.innerHTML = `
+    <div class="editor-modal__card editor-modal__card--wide detail-modal__card">
+      <div class="detail-modal__preview" id="detail-preview"></div>
+      <div class="detail-modal__body">
+        <div class="detail-modal__header">
+          <div>
+            <p class="mono-label detail-modal__meta" id="detail-meta"></p>
+            <h2 class="detail-modal__title" id="detail-title"></h2>
+          </div>
+          <button class="editor-modal__close" aria-label="Close">×</button>
+        </div>
+        <p class="detail-modal__desc" id="detail-desc"></p>
+        <div class="detail-modal__tags" id="detail-tags"></div>
+      </div>
+    </div>`;
+  modal.querySelector('.editor-modal__close').addEventListener('click', () => closeDetailModal());
+  modal.addEventListener('click', e => { if (e.target === modal) closeDetailModal(); });
+  document.body.appendChild(modal);
+  return modal;
+}
+
+let detailCleanup = null;
+function closeDetailModal() {
+  const modal = document.getElementById('project-detail-modal');
+  if (!modal) return;
+  closeModal(modal);
+  if (detailCleanup) { detailCleanup(); detailCleanup = null; }
+  // Clear preview canvas/img after transition
+  setTimeout(() => {
+    const preview = document.getElementById('detail-preview');
+    if (preview) preview.innerHTML = '';
+  }, 300);
+}
+
+async function openDetailModal(card) {
+  let modal = document.getElementById('project-detail-modal');
+  if (!modal) modal = buildDetailModal();
+
+  // Read data from card DOM
+  const title    = card.querySelector('.project-card__title')?.textContent || '';
+  const desc     = card.querySelector('.project-card__desc')?.textContent  || '';
+  const meta     = card.querySelector('.project-card__meta')?.textContent  || '';
+  const tags     = [...card.querySelectorAll('.tag')].map(t => t.textContent);
+  const entryId  = card.dataset.entryId;
+  const isDynamic= !!entryId;
+
+  document.getElementById('detail-title').textContent = title;
+  document.getElementById('detail-meta').textContent  = meta;
+  document.getElementById('detail-desc').textContent  = desc;
+  document.getElementById('detail-tags').innerHTML =
+    tags.map(t => `<span class="tag">${t}</span>`).join('');
+
+  const preview = document.getElementById('detail-preview');
+  preview.innerHTML = ''; // clear
+
+  if (isDynamic) {
+    const entries = getPageEntries('3d-projects');
+    const entry = entries.find(e => e.id === entryId);
+    if (entry) {
+      const blob = await loadFile(entry.fileId);
+      if (blob) {
+        if (entry.type === 'fbx') {
+          const canvas = document.createElement('canvas');
+          canvas.className = 'detail-modal__canvas';
+          preview.appendChild(canvas);
+          const buf = await blob.arrayBuffer();
+          import('./fbx-viewer.js').then(({ initFBXViewer }) => {
+            initFBXViewer(canvas, buf).then(cleanup => { detailCleanup = cleanup; });
+          });
+        } else {
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(blob);
+          img.className = 'detail-modal__img';
+          img.alt = title;
+          preview.appendChild(img);
+        }
+      }
+    }
+  } else {
+    // Static card: show the wireframe aesthetic placeholder
+    const hue = card.dataset.hue || 'clay';
+    preview.className = `detail-modal__preview detail-modal__preview--${hue}`;
+    const label = card.querySelector('.project-card__label')?.textContent || '';
+    preview.innerHTML = `<span class="detail-modal__file-label">${label}</span>`;
+  }
+
+  openModal(modal);
+}
+
+function wireProjectDetailClicks() {
+  if (PAGE !== '3d-projects') return;
+  document.getElementById('project-grid').addEventListener('click', e => {
+    // Don't open detail when clicking editor controls
+    if (e.target.closest('.card-editor-controls')) return;
+    const card = e.target.closest('.project-card');
+    if (card) openDetailModal(card);
+  });
+}
+
+// ─── Project card builder (dynamic) ──────────────────────────
 async function buildProjectCard(entry) {
   const card = document.createElement('article');
   card.className = 'project-card';
   card.dataset.category = entry.category || 'other';
-  card.dataset.dynamic = '1';
-  card.dataset.entryId = entry.id;
+  card.dataset.dynamic  = '1';
+  card.dataset.entryId  = entry.id;
 
   const tags = (entry.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+  const cat  = entry.category ? entry.category.charAt(0).toUpperCase() + entry.category.slice(1) : 'Work';
 
   card.innerHTML = `
     <div class="project-card__thumb">
       <span class="project-card__label">// ${entry.fileName || 'upload'}</span>
     </div>
     <div class="project-card__body">
-      <p class="mono-label project-card__meta">${entry.category ? entry.category.charAt(0).toUpperCase() + entry.category.slice(1) : 'Work'} — ${entry.year || new Date().getFullYear()}</p>
+      <p class="mono-label project-card__meta">${cat} — ${entry.year || new Date().getFullYear()}</p>
       <h2 class="project-card__title">${entry.title}</h2>
       <p class="project-card__desc">${entry.description || ''}</p>
       <div class="project-card__tags">${tags}</div>
@@ -264,24 +332,17 @@ async function buildProjectCard(entry) {
     <div class="card-editor-controls">
       <button class="card-ctrl-btn card-ctrl-btn--edit" title="Edit">✎</button>
       <button class="card-ctrl-btn card-ctrl-btn--delete" title="Delete">×</button>
-    </div>
-  `;
+    </div>`;
 
   const thumb = card.querySelector('.project-card__thumb');
-
-  // Populate thumb with file content
-  const blob = await loadFile(entry.fileId);
+  const blob  = await loadFile(entry.fileId);
   if (blob) {
-    const isFBX = entry.type === 'fbx';
-    if (isFBX) {
+    if (entry.type === 'fbx') {
       const canvas = document.createElement('canvas');
       canvas.style.cssText = 'display:block;width:100%;height:100%;';
       thumb.appendChild(canvas);
-      // Lazy-import the FBX viewer so Three.js only loads when needed
-      const arrayBuffer = await blob.arrayBuffer();
-      import('./fbx-viewer.js').then(({ initFBXViewer }) => {
-        initFBXViewer(canvas, arrayBuffer);
-      });
+      const buf = await blob.arrayBuffer();
+      import('./fbx-viewer.js').then(({ initFBXViewer }) => initFBXViewer(canvas, buf));
     } else {
       const img = document.createElement('img');
       img.src = URL.createObjectURL(blob);
@@ -290,13 +351,10 @@ async function buildProjectCard(entry) {
     }
   }
 
-  // Edit button
   card.querySelector('.card-ctrl-btn--edit').addEventListener('click', e => {
     e.stopPropagation();
     openEditProjectModal(entry);
   });
-
-  // Delete button
   card.querySelector('.card-ctrl-btn--delete').addEventListener('click', async e => {
     e.stopPropagation();
     if (!confirm(`Delete "${entry.title}"?`)) return;
@@ -308,20 +366,12 @@ async function buildProjectCard(entry) {
   return card;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Load and render all stored project cards
-// ─────────────────────────────────────────────────────────────
 async function renderStoredProjects() {
   const grid = document.getElementById('project-grid');
   if (!grid) return;
-
-  const entries = getPageEntries('3d-projects');
-  for (const entry of entries) {
-    const card = await buildProjectCard(entry);
-    grid.prepend(card);
+  for (const entry of getPageEntries('3d-projects')) {
+    grid.prepend(await buildProjectCard(entry));
   }
-
-  // Re-run filter so dynamic cards respect active filter
   refreshProjectFilter();
 }
 
@@ -330,31 +380,28 @@ function refreshProjectFilter() {
   if (!activeBtn) return;
   const filter = activeBtn.dataset.filter;
   document.querySelectorAll('.project-card').forEach(card => {
-    card.classList.toggle('is-hidden',
-      filter !== 'all' && card.dataset.category !== filter);
+    card.classList.toggle('is-hidden', filter !== 'all' && card.dataset.category !== filter);
   });
 }
 
-// ─────────────────────────────────────────────────────────────
-// Upload modal for 3D projects
-// ─────────────────────────────────────────────────────────────
+// ─── Upload modal ─────────────────────────────────────────────
 function openUploadModal(prefill = null) {
-  const modal = buildModal('editor-upload-modal', prefill ? 'Edit Project' : 'Add Project', true);
-  const body = modal.querySelector('.editor-modal__body');
+  const old = document.getElementById('editor-upload-modal');
+  if (old) old.remove();
 
-  const isEdit = !!prefill;
-  const p = prefill || {};
+  const modal = buildModal('editor-upload-modal', prefill ? 'Edit Project' : 'Add Project', true);
+  const body  = modal.querySelector('.editor-modal__body');
+  const p     = prefill || {};
 
   body.innerHTML = `
     <form class="editor-form" id="upload-form" novalidate>
-      <div class="upload-dropzone" id="upload-dropzone" ${isEdit ? 'style="border-style:solid;opacity:0.6;"' : ''}>
+      <div class="upload-dropzone" id="upload-dropzone">
         <span class="upload-dropzone__icon">⬆</span>
-        <span class="upload-dropzone__label">${isEdit ? 'Drop a new file to replace (optional)' : 'Drop file here or click to browse'}</span>
+        <span class="upload-dropzone__label">${prefill ? 'Drop a new file to replace (optional)' : 'Drop file here or click to browse'}</span>
         <span class="upload-dropzone__sub">Accepts .fbx · .png · .jpg · .jpeg · .webp</span>
         <span class="upload-dropzone__filename" id="upload-filename"></span>
         <input type="file" id="upload-file-input" accept=".fbx,.png,.jpg,.jpeg,.webp" style="display:none">
       </div>
-
       <div class="editor-field__row">
         <div class="editor-field">
           <label for="up-title">Title</label>
@@ -365,37 +412,32 @@ function openUploadModal(prefill = null) {
           <input id="up-year" type="text" value="${p.year || new Date().getFullYear()}" maxlength="4">
         </div>
       </div>
-
       <div class="editor-field">
         <label for="up-desc">Description</label>
         <textarea id="up-desc">${p.description || ''}</textarea>
       </div>
-
       <div class="editor-field__row">
         <div class="editor-field">
           <label for="up-category">Category</label>
           <select id="up-category">
             ${['character','environment','product','motion','other'].map(c =>
-              `<option value="${c}" ${p.category === c ? 'selected' : ''}>${c.charAt(0).toUpperCase() + c.slice(1)}</option>`
+              `<option value="${c}" ${p.category===c?'selected':''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`
             ).join('')}
           </select>
         </div>
         <div class="editor-field">
           <label for="up-tags">Tags (comma-separated)</label>
-          <input id="up-tags" type="text" value="${(p.tags || []).join(', ')}">
+          <input id="up-tags" type="text" value="${(p.tags||[]).join(', ')}">
         </div>
       </div>
-
       <div class="editor-btn-row">
         <button type="button" class="editor-btn editor-btn--ghost" id="upload-cancel">Cancel</button>
-        <button type="submit" class="editor-btn editor-btn--primary">${isEdit ? 'Save Changes' : 'Add to Portfolio'}</button>
+        <button type="submit" class="editor-btn editor-btn--primary">${prefill ? 'Save Changes' : 'Add to Portfolio'}</button>
       </div>
-    </form>
-  `;
+    </form>`;
 
-  // File pick logic
   let pickedFile = null;
-  const dropzone = document.getElementById('upload-dropzone');
+  const dropzone  = document.getElementById('upload-dropzone');
   const fileInput = document.getElementById('upload-file-input');
   const fileLabel = document.getElementById('upload-filename');
 
@@ -410,8 +452,7 @@ function openUploadModal(prefill = null) {
   dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
   dropzone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropzone.classList.remove('drag-over');
+    e.preventDefault(); dropzone.classList.remove('drag-over');
     if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
   });
 
@@ -421,35 +462,28 @@ function openUploadModal(prefill = null) {
     e.preventDefault();
     const title = document.getElementById('up-title').value.trim();
     if (!title) return;
-    if (!isEdit && !pickedFile) { alert('Please pick a file.'); return; }
+    if (!prefill && !pickedFile) { alert('Please pick a file.'); return; }
 
     const entry = {
       id: p.id || genId(),
-      type: pickedFile
-        ? (pickedFile.name.toLowerCase().endsWith('.fbx') ? 'fbx' : 'image')
-        : p.type,
+      type: pickedFile ? (pickedFile.name.toLowerCase().endsWith('.fbx') ? 'fbx' : 'image') : p.type,
       title,
       description: document.getElementById('up-desc').value.trim(),
-      category: document.getElementById('up-category').value,
-      year: document.getElementById('up-year').value.trim(),
-      tags: document.getElementById('up-tags').value.split(',').map(t => t.trim()).filter(Boolean),
-      fileId: p.fileId || genId(),
-      fileName: pickedFile ? pickedFile.name : p.fileName,
+      category:    document.getElementById('up-category').value,
+      year:        document.getElementById('up-year').value.trim(),
+      tags:        document.getElementById('up-tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+      fileId:      p.fileId || genId(),
+      fileName:    pickedFile ? pickedFile.name : p.fileName,
     };
 
-    if (pickedFile) {
-      await saveFile(entry.fileId, pickedFile);
-    }
-
+    if (pickedFile) await saveFile(entry.fileId, pickedFile);
     savePageEntry('3d-projects', entry);
     closeModal(modal);
 
-    // Update DOM
     const existing = document.querySelector(`.project-card[data-entry-id="${entry.id}"]`);
     if (existing) existing.remove();
     const grid = document.getElementById('project-grid');
-    const card = await buildProjectCard(entry);
-    grid.prepend(card);
+    grid.prepend(await buildProjectCard(entry));
     refreshProjectFilter();
   });
 
@@ -457,69 +491,56 @@ function openUploadModal(prefill = null) {
 }
 
 function openEditProjectModal(entry) {
-  // Remove stale modal so it rebuilds with fresh prefill
-  const old = document.getElementById('editor-upload-modal');
-  if (old) old.remove();
   openUploadModal(entry);
 }
 
-// ─────────────────────────────────────────────────────────────
-// Blog post builder
-// ─────────────────────────────────────────────────────────────
+// ─── Blog ─────────────────────────────────────────────────────
+function formatDate(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
+  catch { return iso; }
+}
+
 function buildPostRow(entry, isFeatured = false) {
+  const el = document.createElement('a');
+  el.href = '#';
+  el.dataset.dynamic = '1';
+  el.dataset.entryId = entry.id;
+
   if (isFeatured) {
-    const el = document.createElement('a');
-    el.href = '#';
     el.className = 'post-featured';
-    el.dataset.dynamic = '1';
-    el.dataset.entryId = entry.id;
     el.innerHTML = `
       <div class="post-featured__eyebrow">
         <span class="badge">Latest</span>
         <time class="post-featured__date" datetime="${entry.date}">${formatDate(entry.date)}</time>
       </div>
       <h2 class="post-featured__title">${entry.title}</h2>
-      <p class="post-featured__excerpt">${entry.excerpt || ''}</p>
-      <span class="read-time">${entry.readTime || ''}</span>
+      <p class="post-featured__excerpt">${entry.excerpt||''}</p>
+      <span class="read-time">${entry.readTime||''}</span>
       <div class="post-editor-controls">
         <button class="card-ctrl-btn card-ctrl-btn--edit" title="Edit">✎</button>
         <button class="card-ctrl-btn card-ctrl-btn--delete" title="Delete">×</button>
+      </div>`;
+  } else {
+    el.className = 'post-row';
+    el.setAttribute('role','listitem');
+    el.innerHTML = `
+      <time class="post-row__date" datetime="${entry.date}">${formatDate(entry.date)}</time>
+      <div class="post-row__body">
+        <span class="post-row__tag">${entry.tag||''}</span>
+        <h2 class="post-row__title">${entry.title}</h2>
+        <p class="post-row__excerpt">${entry.excerpt||''}</p>
+        <div class="post-row__meta"><span class="read-time">${entry.readTime||''}</span></div>
       </div>
-    `;
-    el.querySelector('.card-ctrl-btn--edit').addEventListener('click', e => {
-      e.preventDefault(); e.stopPropagation(); openEditPostModal(entry);
-    });
-    el.querySelector('.card-ctrl-btn--delete').addEventListener('click', e => {
-      e.preventDefault(); e.stopPropagation();
-      if (!confirm(`Delete "${entry.title}"?`)) return;
-      deletePageEntry('blog', entry.id);
-      el.remove();
-    });
-    return el;
+      <span class="post-row__arrow" aria-hidden="true">→</span>
+      <div class="post-editor-controls">
+        <button class="card-ctrl-btn card-ctrl-btn--edit" title="Edit">✎</button>
+        <button class="card-ctrl-btn card-ctrl-btn--delete" title="Delete">×</button>
+      </div>`;
   }
 
-  const el = document.createElement('a');
-  el.href = '#';
-  el.className = 'post-row';
-  el.setAttribute('role', 'listitem');
-  el.dataset.dynamic = '1';
-  el.dataset.entryId = entry.id;
-  el.innerHTML = `
-    <time class="post-row__date" datetime="${entry.date}">${formatDate(entry.date)}</time>
-    <div class="post-row__body">
-      <span class="post-row__tag">${entry.tag || ''}</span>
-      <h2 class="post-row__title">${entry.title}</h2>
-      <p class="post-row__excerpt">${entry.excerpt || ''}</p>
-      <div class="post-row__meta"><span class="read-time">${entry.readTime || ''}</span></div>
-    </div>
-    <span class="post-row__arrow" aria-hidden="true">→</span>
-    <div class="post-editor-controls">
-      <button class="card-ctrl-btn card-ctrl-btn--edit" title="Edit">✎</button>
-      <button class="card-ctrl-btn card-ctrl-btn--delete" title="Delete">×</button>
-    </div>
-  `;
   el.querySelector('.card-ctrl-btn--edit').addEventListener('click', e => {
-    e.preventDefault(); e.stopPropagation(); openEditPostModal(entry);
+    e.preventDefault(); e.stopPropagation(); openAddPostModal(entry);
   });
   el.querySelector('.card-ctrl-btn--delete').addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation();
@@ -530,167 +551,239 @@ function buildPostRow(entry, isFeatured = false) {
   return el;
 }
 
-function formatDate(iso) {
-  if (!iso) return '';
-  try {
-    return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  } catch { return iso; }
-}
-
 function renderStoredPosts() {
   const list = document.querySelector('.post-list');
   if (!list) return;
-
-  const entries = getPageEntries('blog');
-  entries.forEach((entry, i) => {
-    const isFeatured = i === 0;
-    const el = buildPostRow(entry, isFeatured);
-    if (isFeatured) {
-      // Insert before the existing .post-featured (or at top of content)
-      const existingFeatured = document.querySelector('.post-featured');
-      if (existingFeatured) existingFeatured.before(el);
-      else list.before(el);
+  getPageEntries('blog').forEach((entry, i) => {
+    const el = buildPostRow(entry, i === 0);
+    if (i === 0) {
+      const ef = document.querySelector('.post-featured');
+      if (ef) ef.before(el); else list.before(el);
     } else {
       list.prepend(el);
     }
   });
 }
 
-// ─────────────────────────────────────────────────────────────
-// Blog post modal
-// ─────────────────────────────────────────────────────────────
 function openAddPostModal(prefill = null) {
   const old = document.getElementById('editor-post-modal');
   if (old) old.remove();
-
   const modal = buildModal('editor-post-modal', prefill ? 'Edit Post' : 'Add Post', true);
-  const body = modal.querySelector('.editor-modal__body');
-  const p = prefill || {};
+  const body  = modal.querySelector('.editor-modal__body');
+  const p     = prefill || {};
   const today = new Date().toISOString().split('T')[0];
 
   body.innerHTML = `
     <form class="editor-form" id="post-form" novalidate>
       <div class="editor-field">
         <label for="post-title">Title</label>
-        <input id="post-title" type="text" value="${p.title || ''}" required>
+        <input id="post-title" type="text" value="${p.title||''}" required>
       </div>
       <div class="editor-field">
         <label for="post-excerpt">Excerpt</label>
-        <textarea id="post-excerpt">${p.excerpt || ''}</textarea>
+        <textarea id="post-excerpt">${p.excerpt||''}</textarea>
       </div>
       <div class="editor-field__row">
         <div class="editor-field">
-          <label for="post-tag">Tag / Category</label>
-          <input id="post-tag" type="text" value="${p.tag || ''}">
+          <label for="post-tag">Tag</label>
+          <input id="post-tag" type="text" value="${p.tag||''}">
         </div>
         <div class="editor-field">
-          <label for="post-date">Date (YYYY-MM-DD)</label>
-          <input id="post-date" type="date" value="${p.date || today}">
+          <label for="post-date">Date</label>
+          <input id="post-date" type="date" value="${p.date||today}">
         </div>
       </div>
       <div class="editor-field">
-        <label for="post-readtime">Read time (e.g. "5 min read")</label>
-        <input id="post-readtime" type="text" value="${p.readTime || ''}">
+        <label for="post-readtime">Read time</label>
+        <input id="post-readtime" type="text" value="${p.readTime||''}">
       </div>
       <div class="editor-btn-row">
         <button type="button" class="editor-btn editor-btn--ghost" id="post-cancel">Cancel</button>
-        <button type="submit" class="editor-btn editor-btn--primary">${prefill ? 'Save Changes' : 'Publish Post'}</button>
+        <button type="submit" class="editor-btn editor-btn--primary">${prefill?'Save Changes':'Publish Post'}</button>
       </div>
-    </form>
-  `;
+    </form>`;
 
   document.getElementById('post-cancel').addEventListener('click', () => closeModal(modal));
-
   document.getElementById('post-form').addEventListener('submit', e => {
     e.preventDefault();
     const title = document.getElementById('post-title').value.trim();
     if (!title) return;
-
     const entry = {
       id: p.id || genId(),
       title,
-      excerpt: document.getElementById('post-excerpt').value.trim(),
-      tag: document.getElementById('post-tag').value.trim(),
-      date: document.getElementById('post-date').value,
+      excerpt:  document.getElementById('post-excerpt').value.trim(),
+      tag:      document.getElementById('post-tag').value.trim(),
+      date:     document.getElementById('post-date').value,
       readTime: document.getElementById('post-readtime').value.trim(),
     };
-
     savePageEntry('blog', entry);
     closeModal(modal);
-
-    // Remove old element and re-render
-    const existing = document.querySelector(`[data-entry-id="${entry.id}"]`);
-    if (existing) existing.remove();
-
+    document.querySelector(`[data-entry-id="${entry.id}"]`)?.remove();
     const entries = getPageEntries('blog');
-    const isFeatured = entries[0]?.id === entry.id;
-    const el = buildPostRow(entry, isFeatured);
-
+    const el = buildPostRow(entry, entries[0]?.id === entry.id);
     const list = document.querySelector('.post-list');
-    if (isFeatured) {
-      const ef = document.querySelector('.post-featured[data-dynamic]');
-      if (ef) ef.before(el);
-      else if (list) list.before(el);
+    if (entries[0]?.id === entry.id) {
+      document.querySelector('.post-featured[data-dynamic]')?.before(el) || list?.before(el);
     } else {
-      if (list) list.prepend(el);
+      list?.prepend(el);
     }
   });
-
   openModal(modal);
 }
 
-function openEditPostModal(entry) {
-  openAddPostModal(entry);
+// ─── CV editing ───────────────────────────────────────────────
+function loadCV() {
+  if (PAGE !== 'cv') return;
+  try {
+    const data = JSON.parse(localStorage.getItem(CV_KEY) || '{}');
+    document.querySelectorAll('.cv-field').forEach(el => {
+      const key = el.dataset.field;
+      if (data[key] !== undefined) el.innerHTML = data[key];
+    });
+  } catch {}
+
+  // Photo
+  loadFile('cv-photo').then(blob => {
+    if (!blob) return;
+    const img = document.getElementById('cv-photo-img');
+    const placeholder = document.querySelector('.cv-photo__placeholder');
+    if (img) { img.src = URL.createObjectURL(blob); img.style.display = 'block'; }
+    if (placeholder) placeholder.style.display = 'none';
+  });
 }
 
-// ─────────────────────────────────────────────────────────────
-// "Add Content" / "Add Post" button injection
-// ─────────────────────────────────────────────────────────────
-function injectAddContentBtn() {
-  if (PAGE === '3d-projects') {
-    const filterBar = document.querySelector('.filter-bar');
-    if (!filterBar) return;
-    const btn = document.createElement('button');
-    btn.className = 'add-content-btn';
-    btn.innerHTML = '+ Add Project';
-    btn.addEventListener('click', () => openUploadModal());
-    filterBar.after(btn);
-  }
-
-  if (PAGE === 'blog') {
-    const list = document.querySelector('.post-list');
-    if (!list) return;
-    const btn = document.createElement('button');
-    btn.className = 'add-content-btn';
-    btn.innerHTML = '+ Add Post';
-    btn.addEventListener('click', () => openAddPostModal());
-    list.before(btn);
-  }
+function enableCVEditing() {
+  if (PAGE !== 'cv') return;
+  document.querySelectorAll('.cv-field').forEach(el => {
+    el.contentEditable = 'true';
+  });
 }
 
-// ─────────────────────────────────────────────────────────────
-// Init
-// ─────────────────────────────────────────────────────────────
+function disableCVEditing() {
+  document.querySelectorAll('.cv-field').forEach(el => {
+    el.contentEditable = 'false';
+  });
+}
+
+function saveCV() {
+  const data = {};
+  document.querySelectorAll('.cv-field').forEach(el => {
+    data[el.dataset.field] = el.innerHTML;
+  });
+  localStorage.setItem(CV_KEY, JSON.stringify(data));
+  const btn = document.getElementById('cv-save-btn');
+  if (btn) { btn.textContent = 'Saved ✓'; setTimeout(() => { btn.textContent = 'Save CV'; }, 2000); }
+}
+
+function wireCV() {
+  if (PAGE !== 'cv') return;
+
+  // Save button
+  document.getElementById('cv-save-btn')?.addEventListener('click', saveCV);
+
+  // Photo upload
+  const photoBlock = document.getElementById('cv-photo-block');
+  const photoInput = document.getElementById('cv-photo-input');
+  photoBlock?.addEventListener('click', () => {
+    if (isEditorActive()) photoInput?.click();
+  });
+  photoInput?.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await saveFile('cv-photo', file);
+    const img = document.getElementById('cv-photo-img');
+    const placeholder = document.querySelector('.cv-photo__placeholder');
+    if (img) { img.src = URL.createObjectURL(file); img.style.display = 'block'; }
+    if (placeholder) placeholder.style.display = 'none';
+  });
+
+  // Logout on cv page
+  document.querySelector('.editor-logout')?.addEventListener('click', () => {
+    deactivateEditor();
+    disableCVEditing();
+  });
+}
+
+// ─── Watch editor-active state changes ───────────────────────
+const origActivate   = activateEditor;
+const origDeactivate = deactivateEditor;
+
+// Patch to handle CV-specific side effects
+function activateEditorFull() {
+  origActivate();
+  if (PAGE === 'cv') enableCVEditing();
+}
+function deactivateEditorFull() {
+  origDeactivate();
+  if (PAGE === 'cv') disableCVEditing();
+}
+
+// ─── Init ────────────────────────────────────────────────────
 async function init() {
-  // Restore editor session if already active
+  // Restore editor session
   if (isEditorActive()) {
     document.body.classList.add('editor-active');
+    if (PAGE === 'cv') enableCVEditing();
   }
 
-  injectEditKey();
-  injectAddContentBtn();
+  // Override activate/deactivate with CV-aware versions
+  const loginModal = buildLoginModal();
+  // Patch login form submit to use full activate
+  const loginForm = document.getElementById('editor-login-form');
+  if (loginForm) {
+    loginForm.removeEventListener('submit', loginForm._handler);
+    loginForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const user = document.getElementById('ed-user').value.trim();
+      const pass = document.getElementById('ed-pass').value;
+      if (user === CREDS.user && pass === CREDS.pass) {
+        closeModal(loginModal);
+        activateEditorFull();
+        document.getElementById('ed-user').value = '';
+        document.getElementById('ed-pass').value = '';
+      } else {
+        const card = loginModal.querySelector('.editor-modal__card');
+        card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+        document.getElementById('editor-login-error').classList.add('is-visible');
+      }
+    });
+  }
 
-  // Load stored content for the current page
+  // Keyboard shortcut
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.shiftKey && e.key === 'E') {
+      e.preventDefault();
+      if (isEditorActive()) deactivateEditorFull();
+      else openModal(loginModal);
+    }
+  });
+
+  // Nav controls (badge + logout) on pages that have .site-nav
+  injectNavControls();
+
+  // Patch logout buttons on all pages
+  document.querySelectorAll('.editor-logout').forEach(btn => {
+    btn.addEventListener('click', deactivateEditorFull);
+  });
+
+  // Page-specific setup
   if (PAGE === '3d-projects') {
+    injectAddContentBtn();
     await renderStoredProjects();
-    // Re-wire filter buttons to also affect dynamic cards
+    wireProjectDetailClicks();
     document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => setTimeout(refreshProjectFilter, 0));
     });
   }
 
   if (PAGE === 'blog') {
+    injectAddContentBtn();
     renderStoredPosts();
+  }
+
+  if (PAGE === 'cv') {
+    loadCV();
+    wireCV();
   }
 }
 

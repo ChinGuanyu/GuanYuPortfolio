@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GuanYu — CV</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/tokens.css">
+  <link rel="stylesheet" href="../css/inner.css">
+  <link rel="stylesheet" href="../css/cv.css">
+  <link rel="stylesheet" href="../css/editor.css">
+</head>
+<body class="page-shell">
+
+  <nav class="site-nav">
+    <a href="../hub/" class="site-nav__back">← Hub</a>
+    <span class="site-nav__label">Curriculum Vitae</span>
+    <span class="editor-badge">Editing</span>
+    <button class="editor-logout">Exit Editor</button>
+  </nav>
+
+  <header class="page-hero">
+    <span class="mono-label">curriculum vitae — 2025</span>
+    <h1 class="page-hero__title" style="font-size: clamp(2rem,6vw,3.5rem)">
+      <span class="cv-field" data-field="fullName">Chin Guan Yu</span>
+    </h1>
+    <p class="page-hero__sub">
+      <span class="cv-field" data-field="headline">Bachelor in Interactive Media &amp; Immersive Technology · VR/AR Specialist</span>
+    </p>
+  </header>
+
+  <div class="page-content">
+    <div class="cv-layout">
+
+      <!-- ── Sidebar ── -->
+      <aside class="cv-sidebar">
+
+        <!-- Photo -->
+        <div class="cv-card">
+          <div class="cv-photo" id="cv-photo-block" title="Click to upload photo">
+            <img id="cv-photo-img" src="" alt="GuanYu" style="display:none">
+            <span class="cv-photo__placeholder">// photo.jpg</span>
+            <span class="cv-photo__upload-hint">Click to upload</span>
+          </div>
+          <input type="file" id="cv-photo-input" accept=".png,.jpg,.jpeg,.webp" style="display:none">
+        </div>
+
+        <!-- Contact -->
+        <div class="cv-card">
+          <span class="cv-section-label">Contact</span>
+
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Email</span>
+            <span class="cv-contact-val cv-field" data-field="email">guanyu1253@gmail.com</span>
+          </div>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Mobile</span>
+            <span class="cv-contact-val cv-field" data-field="mobile">016 – 664 8790</span>
+          </div>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Address</span>
+            <span class="cv-contact-val cv-field" data-field="address">APU Satellite Residence, Jalan Teknologi 9, 57000 Kuala Lumpur</span>
+          </div>
+        </div>
+
+        <!-- Personal -->
+        <div class="cv-card">
+          <span class="cv-section-label">Personal</span>
+
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Age</span>
+            <span class="cv-contact-val cv-field" data-field="age">21</span>
+          </div>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Birth Date</span>
+            <span class="cv-contact-val cv-field" data-field="birthDate">5 October 2004</span>
+          </div>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Place of Birth</span>
+            <span class="cv-contact-val cv-field" data-field="birthPlace">Johor Bahru</span>
+          </div>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Citizenship</span>
+            <span class="cv-contact-val cv-field" data-field="citizenship">Malaysian</span>
+          </div>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Health</span>
+            <span class="cv-contact-val cv-field" data-field="health">Excellent</span>
+          </div>
+        </div>
+
+        <!-- Language -->
+        <div class="cv-card">
+          <span class="cv-section-label">Languages</span>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">English</span>
+            <span class="cv-contact-val cv-field" data-field="langEn">Excellent</span>
+          </div>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Chinese</span>
+            <span class="cv-contact-val cv-field" data-field="langZh">Excellent</span>
+          </div>
+          <div class="cv-contact-row">
+            <span class="cv-contact-key">Malay</span>
+            <span class="cv-contact-val cv-field" data-field="langMs">Moderate</span>
+          </div>
+        </div>
+
+        <!-- Strengths -->
+        <div class="cv-card">
+          <span class="cv-section-label">Strengths</span>
+          <ul class="cv-skill-list">
+            <li><span class="cv-field" data-field="str1">Team Player</span></li>
+            <li><span class="cv-field" data-field="str2">Adaptability &amp; Collaboration</span></li>
+            <li><span class="cv-field" data-field="str3">Problem Solving</span></li>
+          </ul>
+        </div>
+
+        <!-- Interests -->
+        <div class="cv-card">
+          <span class="cv-section-label">Interests</span>
+          <div class="cv-tag-cloud">
+            <span class="cv-tag cv-field" data-field="int1">Travelling</span>
+            <span class="cv-tag cv-field" data-field="int2">Reading</span>
+            <span class="cv-tag cv-field" data-field="int3">Video Games</span>
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- ── Main ── -->
+      <main class="cv-main">
+
+        <!-- Objective -->
+        <section class="cv-section">
+          <h2 class="cv-section-title">Objective</h2>
+          <p class="cv-prose cv-field" data-field="objective">Throughout my academic journey, I have consistently adopted a proactive and comprehensive approach to learning, which has allowed me to gain valuable insights from both my university education and professional experiences. These opportunities have been pivotal in developing my skills, knowledge, and performance in my chosen field. My dedication to continuous improvement has led me to refine my abilities, ensuring I stay current with industry trends and best practices.</p>
+          <p class="cv-prose cv-field" data-field="objective2">Excelling in teamwork has been a cornerstone of my development, as I have learned to collaborate effectively with diverse groups to achieve common goals. At the same time, I have honed my ability to work independently, managing projects and responsibilities with minimal supervision. I am confident that these skills will enable me to contribute meaningfully to the growth and success of your esteemed organization through an internship placement.</p>
+        </section>
+
+        <!-- Education -->
+        <section class="cv-section">
+          <h2 class="cv-section-title">Education</h2>
+
+          <div class="cv-entry">
+            <div class="cv-entry__period cv-field" data-field="edu1Period">2023 – Present</div>
+            <div class="cv-entry__body">
+              <span class="cv-entry__type cv-field" data-field="edu1Type">Tertiary Education</span>
+              <h3 class="cv-entry__title cv-field" data-field="edu1Title">Bachelor in Interactive Media and Immersive Technology (Honours)</h3>
+              <span class="cv-entry__sub cv-field" data-field="edu1Sub">Specialism in VR/AR · GPA 3.0/4.0 · Expected graduation 2026</span>
+              <span class="cv-entry__org cv-field" data-field="edu1Org">Asia Pacific University of Technology and Innovation, Kuala Lumpur</span>
+            </div>
+          </div>
+
+          <div class="cv-entry">
+            <div class="cv-entry__period cv-field" data-field="edu2Period">2017 – 2023</div>
+            <div class="cv-entry__body">
+              <span class="cv-entry__type cv-field" data-field="edu2Type">Secondary School Education</span>
+              <h3 class="cv-entry__title cv-field" data-field="edu2Title">UEC (Unified Examination Certificate) / SPM</h3>
+              <span class="cv-entry__org cv-field" data-field="edu2Org">Foon Yew High School Johor Bahru</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Working Experience -->
+        <section class="cv-section">
+          <h2 class="cv-section-title">Working Experience</h2>
+
+          <div class="cv-entry">
+            <div class="cv-entry__period cv-field" data-field="exp1Period">2023<br>Mar – Jun</div>
+            <div class="cv-entry__body">
+              <span class="cv-entry__type cv-field" data-field="exp1Type">Customer Service Representative</span>
+              <h3 class="cv-entry__title cv-field" data-field="exp1Title">Fish Live Mall Sdn. Bhd.</h3>
+              <p class="cv-prose cv-field" data-field="exp1Desc1">After graduating high school, I had the opportunity to work as a customer service representative for a wholesale company, an experience that profoundly shaped my communication skills. In this role, I was responsible for addressing customer concerns, utilizing problem-solving and communication skills to resolve dissatisfaction effectively.</p>
+              <p class="cv-prose cv-field" data-field="exp1Desc2">This role demanded a high level of communication skills, which I continuously improved through daily interactions with customers and colleagues. Collaborating with a dynamic department further enhanced my communication and teamwork abilities.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Proficiency -->
+        <section class="cv-section">
+          <h2 class="cv-section-title">Proficiency</h2>
+          <ul class="cv-skill-list">
+            <li><span class="cv-field" data-field="prof1">Graphic Design</span></li>
+            <li><span class="cv-field" data-field="prof2">Graphic and Video Editing</span></li>
+            <li><span class="cv-field" data-field="prof3">3D Modeling</span></li>
+            <li><span class="cv-field" data-field="prof4">UI/UX Design</span></li>
+            <li><span class="cv-field" data-field="prof5">Unity VR Development</span></li>
+            <li><span class="cv-field" data-field="prof6">HTML Web Development</span></li>
+          </ul>
+        </section>
+
+        <!-- Software Skills -->
+        <section class="cv-section">
+          <h2 class="cv-section-title">Software Skills</h2>
+          <table class="cv-software-table">
+            <tbody>
+              <tr>
+                <td>2D &amp; Graphic</td>
+                <td><span class="cv-field" data-field="sw1">Adobe Photoshop, Adobe Illustrator</span></td>
+              </tr>
+              <tr>
+                <td>Video Editing</td>
+                <td><span class="cv-field" data-field="sw2">Adobe Premiere Pro, Adobe After Effects</span></td>
+              </tr>
+              <tr>
+                <td>3D Applications</td>
+                <td><span class="cv-field" data-field="sw3">Adobe Animate, 3DS Max, Unity</span></td>
+              </tr>
+              <tr>
+                <td>Office</td>
+                <td><span class="cv-field" data-field="sw4">Microsoft Word, PowerPoint, Excel</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <!-- References -->
+        <section class="cv-section">
+          <h2 class="cv-section-title">References</h2>
+          <div class="cv-refs">
+
+            <div class="cv-ref-card">
+              <span class="cv-ref-card__role cv-field" data-field="ref1Role">Head of Human Resource</span>
+              <h3 class="cv-ref-card__name cv-field" data-field="ref1Name">Amy Law</h3>
+              <span class="cv-ref-card__org cv-field" data-field="ref1Org">Fish Live Mall Sdn. Bhd.</span>
+              <span class="cv-ref-card__contact cv-field" data-field="ref1Contact">Tel: +65 9199712</span>
+            </div>
+
+            <div class="cv-ref-card">
+              <span class="cv-ref-card__role cv-field" data-field="ref2Role">APU Lecturer</span>
+              <h3 class="cv-ref-card__name cv-field" data-field="ref2Name">Sharizal Pujahaas Bin Jaffar</h3>
+              <span class="cv-ref-card__org cv-field" data-field="ref2Org">Faculty of Computing, Engineering &amp; Technology, APU</span>
+              <span class="cv-ref-card__contact cv-field" data-field="ref2Contact">sharizal.pujahaas@apu.edu.my · 017-3790426</span>
+            </div>
+
+            <div class="cv-ref-card">
+              <span class="cv-ref-card__role cv-field" data-field="ref3Role">Internship Supervisor</span>
+              <h3 class="cv-ref-card__name cv-field" data-field="ref3Name">Mohd Norhazli Bin Mohamed Azlanudin</h3>
+              <span class="cv-ref-card__org cv-field" data-field="ref3Org">School of Media, Arts and Design, APU</span>
+              <span class="cv-ref-card__contact cv-field" data-field="ref3Contact">norhazli.azlannudin@apu.edu.my · 010-2900048</span>
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+    </div><!-- /cv-layout -->
+  </div>
+
+  <footer class="site-footer">
+    <span class="site-footer__copy" id="cv-footer-copy">© 2025 Chin Guan Yu</span>
+    <nav class="site-footer__links">
+      <a href="https://github.com/ChinGuanyu" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:guanyu1253@gmail.com">Email</a>
+      <a href="../hub/">Hub</a>
+    </nav>
+  </footer>
+
+  <button class="cv-save-btn" id="cv-save-btn">Save CV</button>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="../js/editor.js"></script>
+</body>
+</html>

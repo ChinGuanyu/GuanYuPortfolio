@@ -1,0 +1,360 @@
+/* CV page styles — extends tokens.css and inner.css */
+
+.cv-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--space-4);
+  align-items: start;
+  max-width: 1000px;
+}
+
+/* ── Sidebar ── */
+.cv-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  position: sticky;
+  top: calc(56px + var(--space-3));
+}
+
+.cv-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Photo block */
+.cv-photo {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  cursor: default;
+}
+.cv-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cv-photo__placeholder {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wire);
+  text-align: center;
+}
+.cv-photo__upload-hint {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(22,21,26,0.7);
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--clay);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+body.editor-active .cv-photo:hover .cv-photo__upload-hint {
+  display: flex;
+}
+body.editor-active .cv-photo { cursor: pointer; }
+
+/* Sidebar section titles */
+.cv-section-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--wire);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 0.2rem;
+}
+
+/* Contact rows */
+.cv-contact-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.cv-contact-row + .cv-contact-row {
+  margin-top: 0.4rem;
+}
+.cv-contact-key {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wire);
+}
+.cv-contact-val {
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+  line-height: 1.4;
+}
+
+/* Skills list */
+.cv-skill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.cv-skill-list li {
+  font-size: 0.82rem;
+  color: var(--ink-dim);
+  padding-left: 0.8rem;
+  position: relative;
+}
+.cv-skill-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--clay);
+  font-size: 0.7rem;
+}
+
+/* Tag-style skills */
+.cv-tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.cv-tag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink-dim);
+}
+
+/* ── Main content ── */
+.cv-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Section block */
+.cv-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cv-section-title {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--wire);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.cv-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Objective / prose */
+.cv-prose {
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+  line-height: 1.75;
+}
+
+/* Education & Experience entries */
+.cv-entry {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.cv-entry:last-child { border-bottom: none; }
+
+.cv-entry__period {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: var(--wire);
+  padding-top: 0.15rem;
+  line-height: 1.5;
+}
+
+.cv-entry__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.cv-entry__type {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wire);
+  font-style: italic;
+}
+
+.cv-entry__title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+  margin: 0;
+}
+
+.cv-entry__sub {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--clay);
+  letter-spacing: 0.03em;
+}
+
+.cv-entry__org {
+  font-size: 0.82rem;
+  color: var(--ink-dim);
+  font-style: italic;
+}
+
+.cv-entry__body .cv-prose {
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+
+/* Software skills table */
+.cv-software-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.cv-software-table td {
+  padding: 0.5rem var(--space-2) 0.5rem 0;
+  vertical-align: top;
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+  border-bottom: 1px solid var(--line);
+}
+.cv-software-table td:first-child {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--wire);
+  white-space: nowrap;
+  padding-right: var(--space-3);
+  width: 140px;
+}
+.cv-software-table tr:last-child td { border-bottom: none; }
+
+/* Reference cards */
+.cv-refs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-2);
+}
+.cv-ref-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.cv-ref-card__role {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wire);
+}
+.cv-ref-card__name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--clay);
+  margin: 0;
+}
+.cv-ref-card__org {
+  font-size: 0.8rem;
+  color: var(--ink-dim);
+  line-height: 1.4;
+}
+.cv-ref-card__contact {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--wire);
+  line-height: 1.5;
+}
+
+/* ── Editor mode: editable fields ── */
+[contenteditable="true"] {
+  outline: none;
+  border-radius: 2px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+[contenteditable="true"]:hover {
+  background: rgba(201,123,74,0.06);
+}
+[contenteditable="true"]:focus {
+  background: rgba(201,123,74,0.1);
+  box-shadow: inset 0 0 0 1px var(--clay);
+}
+
+/* Save CV button */
+.cv-save-btn {
+  display: none;
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  z-index: 20;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.75rem 1.8rem;
+  background: var(--clay);
+  color: var(--bg);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: 0 4px 24px rgba(201,123,74,0.35);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.cv-save-btn:hover { background: var(--clay-dim); transform: translateY(-1px); }
+body.editor-active .cv-save-btn { display: block; }
+
+/* ── Responsive ── */
+@media (max-width: 760px) {
+  .cv-layout {
+    grid-template-columns: 1fr;
+  }
+  .cv-sidebar { position: static; }
+  .cv-entry {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+}
