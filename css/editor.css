@@ -32,6 +32,22 @@ body.editor-active .editor-badge {
   display: inline-block;
 }
 
+/* ── Inline-editable text (page titles, descriptions, static cards) ── */
+body.editor-active .editable-text {
+  cursor: text;
+  border-radius: 2px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+body.editor-active .editable-text:hover {
+  background: rgba(201, 123, 74, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(201, 123, 74, 0.3);
+}
+body.editor-active .editable-text:focus {
+  outline: none;
+  background: rgba(201, 123, 74, 0.1);
+  box-shadow: inset 0 0 0 1px var(--clay);
+}
+
 /* ── Modal backdrop ── */
 .editor-modal {
   position: fixed;

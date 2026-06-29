@@ -8,6 +8,7 @@ const CREDS      = { user: 'tester', pass: '123' };
 const SESSION_KEY = 'gyu_editor';
 const META_KEY    = 'gyu_meta';
 const CV_KEY      = 'gyu_cv';
+const TEXT_KEY    = 'gyu_text';   // per-page inline text overrides
 const IDB_NAME    = 'gyu_files';
 const IDB_STORE   = 'files';
 
@@ -69,6 +70,64 @@ function savePageEntry(p, e)  {
 }
 function deletePageEntry(p,id){ const m=loadMeta(); if(m[p]) m[p]=m[p].filter(e=>e.id!==id); saveMeta(m); }
 function genId()              { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+// ─── Inline text editing (page titles, descriptions, static cards) ──
+function loadTextStore()  { try { return JSON.parse(localStorage.getItem(TEXT_KEY) || '{}'); } catch { return {}; } }
+function saveTextStore(s) { localStorage.setItem(TEXT_KEY, JSON.stringify(s)); }
+
+// Tag elements as inline-editable, assign stable keys, apply saved overrides.
+function initInlineText() {
+  const selectors = ['.page-hero__title', '.page-hero__sub'];
+  if (PAGE === '3d-projects') {
+    // Static (hardcoded) cards only — dynamic cards edit via the ✎ button.
+    selectors.push(
+      '.project-card:not([data-dynamic]) .project-card__title',
+      '.project-card:not([data-dynamic]) .project-card__desc',
+      '.project-card:not([data-dynamic]) .project-card__meta'
+    );
+  }
+  if (PAGE === 'blog') {
+    selectors.push(
+      '.post-featured:not([data-dynamic]) .post-featured__title',
+      '.post-featured:not([data-dynamic]) .post-featured__excerpt',
+      '.post-row:not([data-dynamic]) .post-row__title',
+      '.post-row:not([data-dynamic]) .post-row__excerpt'
+    );
+  }
+
+  const store = loadTextStore();
+  selectors.forEach(sel => {
+    const slug = sel.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+    document.querySelectorAll(sel).forEach((el, i) => {
+      el.dataset.editKey = `${slug}-${i}`;
+      el.classList.add('editable-text');
+      const k = PAGE + ':' + el.dataset.editKey;
+      if (store[k] !== undefined) el.innerHTML = store[k];
+    });
+  });
+}
+
+function enableInlineEditing() {
+  document.querySelectorAll('.editable-text').forEach(el => {
+    el.contentEditable = 'true';
+    if (!el._inlineWired) {
+      el.addEventListener('blur', () => {
+        const store = loadTextStore();
+        store[PAGE + ':' + el.dataset.editKey] = el.innerHTML;
+        saveTextStore(store);
+      });
+      // Enter commits (no newline) for single-line headings
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); el.blur(); }
+      });
+      el._inlineWired = true;
+    }
+  });
+}
+
+function disableInlineEditing() {
+  document.querySelectorAll('.editable-text').forEach(el => { el.contentEditable = 'false'; });
+}
 
 // ─── Auth ────────────────────────────────────────────────────
 function isEditorActive() { return sessionStorage.getItem(SESSION_KEY) === '1'; }
@@ -303,6 +362,8 @@ function wireProjectDetailClicks() {
   document.getElementById('project-grid').addEventListener('click', e => {
     // Don't open detail when clicking editor controls
     if (e.target.closest('.card-editor-controls')) return;
+    // In editor mode, clicking an editable field should edit it, not open the modal
+    if (document.body.classList.contains('editor-active') && e.target.closest('.editable-text')) return;
     const card = e.target.closest('.project-card');
     if (card) openDetailModal(card);
   });
@@ -711,19 +772,20 @@ const origDeactivate = deactivateEditor;
 // Patch to handle CV-specific side effects
 function activateEditorFull() {
   origActivate();
+  enableInlineEditing();
   if (PAGE === 'cv') enableCVEditing();
 }
 function deactivateEditorFull() {
   origDeactivate();
+  disableInlineEditing();
   if (PAGE === 'cv') disableCVEditing();
 }
 
 // ─── Init ────────────────────────────────────────────────────
 async function init() {
-  // Restore editor session
+  // Restore editor session (inline editing enabled after content renders, below)
   if (isEditorActive()) {
     document.body.classList.add('editor-active');
-    if (PAGE === 'cv') enableCVEditing();
   }
 
   // Override activate/deactivate with CV-aware versions
@@ -784,6 +846,14 @@ async function init() {
   if (PAGE === 'cv') {
     loadCV();
     wireCV();
+  }
+
+  // Tag editable text (page titles/descriptions, static cards) and apply
+  // saved overrides for everyone; turn on editing if a session is active.
+  initInlineText();
+  if (isEditorActive()) {
+    enableInlineEditing();
+    if (PAGE === 'cv') enableCVEditing();
   }
 }
 
