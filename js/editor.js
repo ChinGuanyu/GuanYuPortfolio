@@ -9,6 +9,7 @@ const SESSION_KEY = 'gyu_editor';
 const META_KEY    = 'gyu_meta';
 const CV_KEY      = 'gyu_cv';
 const TEXT_KEY    = 'gyu_text';   // per-page inline text overrides
+const CARDS_KEY   = 'gyu_cards';  // per static-card overrides (media/tags/deleted)
 const IDB_NAME    = 'gyu_files';
 const IDB_STORE   = 'files';
 
@@ -77,34 +78,40 @@ function saveTextStore(s) { localStorage.setItem(TEXT_KEY, JSON.stringify(s)); }
 
 // Tag elements as inline-editable, assign stable keys, apply saved overrides.
 function initInlineText() {
-  const selectors = ['.page-hero__title', '.page-hero__sub'];
-  if (PAGE === '3d-projects') {
-    // Static (hardcoded) cards only — dynamic cards edit via the ✎ button.
-    selectors.push(
-      '.project-card:not([data-dynamic]) .project-card__title',
-      '.project-card:not([data-dynamic]) .project-card__desc',
-      '.project-card:not([data-dynamic]) .project-card__meta'
-    );
-  }
-  if (PAGE === 'blog') {
-    selectors.push(
-      '.post-featured:not([data-dynamic]) .post-featured__title',
-      '.post-featured:not([data-dynamic]) .post-featured__excerpt',
-      '.post-row:not([data-dynamic]) .post-row__title',
-      '.post-row:not([data-dynamic]) .post-row__excerpt'
-    );
+  const store = loadTextStore();
+  const apply = (el, key) => {
+    if (!el) return;
+    el.dataset.editKey = key;
+    el.classList.add('editable-text');
+    const k = PAGE + ':' + key;
+    if (store[k] !== undefined) el.innerHTML = store[k];
+  };
+
+  // Page hero title + subtitle. Skip CV — it has its own cv-field system.
+  if (PAGE !== 'cv') {
+    apply(document.querySelector('.page-hero__title'), 'hero-title');
+    apply(document.querySelector('.page-hero__sub'),   'hero-sub');
   }
 
-  const store = loadTextStore();
-  selectors.forEach(sel => {
-    const slug = sel.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
-    document.querySelectorAll(sel).forEach((el, i) => {
-      el.dataset.editKey = `${slug}-${i}`;
-      el.classList.add('editable-text');
-      const k = PAGE + ':' + el.dataset.editKey;
-      if (store[k] !== undefined) el.innerHTML = store[k];
+  // Static project cards — keyed by the stable data-card-key (survives deletions)
+  if (PAGE === '3d-projects') {
+    document.querySelectorAll('.project-card:not([data-dynamic])').forEach(card => {
+      const ck = card.dataset.cardKey ?? '';
+      ['title', 'desc', 'meta'].forEach(part =>
+        apply(card.querySelector('.project-card__' + part), `card-${ck}-${part}`));
     });
-  });
+  }
+
+  // Static blog posts (no deletion yet — positional keys are stable)
+  if (PAGE === 'blog') {
+    [['.post-featured:not([data-dynamic]) .post-featured__title',   'feat-title'],
+     ['.post-featured:not([data-dynamic]) .post-featured__excerpt', 'feat-excerpt']]
+      .forEach(([sel, key]) => apply(document.querySelector(sel), key));
+    document.querySelectorAll('.post-row:not([data-dynamic])').forEach((row, i) => {
+      apply(row.querySelector('.post-row__title'),   `row-${i}-title`);
+      apply(row.querySelector('.post-row__excerpt'), `row-${i}-excerpt`);
+    });
+  }
 }
 
 function enableInlineEditing() {
@@ -127,6 +134,194 @@ function enableInlineEditing() {
 
 function disableInlineEditing() {
   document.querySelectorAll('.editable-text').forEach(el => { el.contentEditable = 'false'; });
+}
+
+// ─── Static project-card overrides (delete / media / tags) ──────
+function loadCards()                 { try { return JSON.parse(localStorage.getItem(CARDS_KEY) || '{}'); } catch { return {}; } }
+function saveCards(c)                { localStorage.setItem(CARDS_KEY, JSON.stringify(c)); }
+function getCardOverride(page, key)  { const c = loadCards(); return (c[page] && c[page][key]) || {}; }
+function setCardOverride(page, key, patch) {
+  const c = loadCards();
+  if (!c[page]) c[page] = {};
+  c[page][key] = { ...(c[page][key] || {}), ...patch };
+  saveCards(c);
+}
+const staticFileId = key => `static-3d-projects-${key}`;
+
+// Render a media blob (image or fbx) into a card thumb
+async function applyCardMedia(card, key, media) {
+  const thumb = card.querySelector('.project-card__thumb');
+  if (!thumb || !media) return;
+  const blob = await loadFile(staticFileId(key));
+  if (!blob) return;
+
+  thumb.querySelectorAll('canvas, img.thumb-media').forEach(n => n.remove());
+  card.classList.add('has-media');
+
+  if (media.type === 'fbx') {
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'display:block;width:100%;height:100%;';
+    thumb.appendChild(canvas);
+    const buf = await blob.arrayBuffer();
+    import('./fbx-viewer.js').then(({ initFBXViewer }) => initFBXViewer(canvas, buf));
+  } else {
+    const img = document.createElement('img');
+    img.className = 'thumb-media';
+    img.src = URL.createObjectURL(blob);
+    img.alt = card.querySelector('.project-card__title')?.textContent || '';
+    thumb.appendChild(img);
+  }
+
+  const label = thumb.querySelector('.project-card__label');
+  if (label && media.fileName) label.textContent = `// ${media.fileName}`;
+}
+
+function clearCardMedia(card) {
+  const thumb = card.querySelector('.project-card__thumb');
+  if (!thumb) return;
+  thumb.querySelectorAll('canvas, img.thumb-media').forEach(n => n.remove());
+  card.classList.remove('has-media');
+  const label = thumb.querySelector('.project-card__label');
+  if (label && card.dataset.origLabel) label.textContent = card.dataset.origLabel;
+}
+
+function renderCardTags(card, tags) {
+  const wrap = card.querySelector('.project-card__tags');
+  if (!wrap) return;
+  wrap.innerHTML = (tags || []).map(t => `<span class="tag">${t}</span>`).join('');
+}
+
+// Attach editor controls + media uploader to one static card
+function setupStaticCardControls(card, key) {
+  // Delete-the-whole-box button (top-right overlay)
+  if (!card.querySelector('.card-editor-controls')) {
+    const ctrls = document.createElement('div');
+    ctrls.className = 'card-editor-controls';
+    ctrls.innerHTML = `<button class="card-ctrl-btn card-ctrl-btn--delete" title="Delete this box">×</button>`;
+    ctrls.querySelector('.card-ctrl-btn--delete').addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!confirm('Delete this entire box? This cannot be undone.')) return;
+      await deleteFile(staticFileId(key)).catch(() => {});
+      setCardOverride('3d-projects', key, { deleted: true });
+      card.remove();
+    });
+    card.appendChild(ctrls);
+  }
+
+  // Media uploader overlay on the thumb
+  const thumb = card.querySelector('.project-card__thumb');
+  if (thumb && !thumb.querySelector('.thumb-upload')) {
+    const overlay = document.createElement('div');
+    overlay.className = 'thumb-upload';
+    overlay.innerHTML = `
+      <span class="thumb-upload__pick">⬆ Upload image / .fbx</span>
+      <button type="button" class="thumb-upload__remove">Remove media</button>
+      <input type="file" accept=".fbx,.png,.jpg,.jpeg,.webp" hidden>`;
+    const input  = overlay.querySelector('input');
+    const remove = overlay.querySelector('.thumb-upload__remove');
+
+    overlay.addEventListener('click', e => {
+      if (!document.body.classList.contains('editor-active')) return;
+      if (e.target === remove) return;
+      e.stopPropagation();
+      input.click();
+    });
+    input.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const media = { type: file.name.toLowerCase().endsWith('.fbx') ? 'fbx' : 'image', fileName: file.name };
+      await saveFile(staticFileId(key), file);
+      setCardOverride('3d-projects', key, { media });
+      await applyCardMedia(card, key, media);
+    });
+    remove.addEventListener('click', async e => {
+      e.stopPropagation();
+      await deleteFile(staticFileId(key)).catch(() => {});
+      setCardOverride('3d-projects', key, { media: null });
+      clearCardMedia(card);
+    });
+    thumb.appendChild(overlay);
+  }
+}
+
+// Tag the static cards, apply overrides, wire controls
+async function enhanceStaticCards() {
+  if (PAGE !== '3d-projects') return;
+  const cards = [...document.querySelectorAll('.project-card:not([data-dynamic])')];
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    const key  = String(i);
+    card.dataset.cardKey = key;
+    const label = card.querySelector('.project-card__label');
+    if (label) card.dataset.origLabel = label.textContent;
+
+    const ov = getCardOverride('3d-projects', key);
+    if (ov.deleted) { card.remove(); continue; }
+    if (ov.tags)  renderCardTags(card, ov.tags);
+    if (ov.media) await applyCardMedia(card, key, ov.media);
+
+    setupStaticCardControls(card, key);
+  }
+}
+
+// ─── Editable tags (inline add / edit / remove) ─────────────────
+function persistCardTags(card) {
+  const tags = [...card.querySelectorAll('.project-card__tags .tag:not(.tag-add)')]
+    .map(t => t.textContent.replace(/\s*×\s*$/, '').trim()).filter(Boolean);
+  if (card.dataset.entryId) {
+    const entries = getPageEntries('3d-projects');
+    const entry = entries.find(e => e.id === card.dataset.entryId);
+    if (entry) { entry.tags = tags; savePageEntry('3d-projects', entry); }
+  } else if (card.dataset.cardKey !== undefined) {
+    setCardOverride('3d-projects', card.dataset.cardKey, { tags });
+  }
+}
+
+function wireEditableTag(tag, card) {
+  if (tag.classList.contains('tag-add') || tag._tagWired) return;
+  tag.contentEditable = 'true';
+  tag.addEventListener('click', e => e.stopPropagation());
+  tag.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); tag.blur(); }
+  });
+  tag.addEventListener('blur', () => {
+    if (!tag.textContent.trim()) tag.remove();
+    persistCardTags(card);
+  });
+  tag._tagWired = true;
+}
+
+function enableTagEditing() {
+  if (PAGE !== '3d-projects') return;
+  document.querySelectorAll('.project-card').forEach(card => {
+    const wrap = card.querySelector('.project-card__tags');
+    if (!wrap) return;
+    wrap.querySelectorAll('.tag').forEach(tag => wireEditableTag(tag, card));
+    if (!wrap.querySelector('.tag-add')) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'tag tag-add';
+      add.textContent = '+';
+      add.title = 'Add tag';
+      add.addEventListener('click', e => {
+        e.stopPropagation();
+        const t = document.createElement('span');
+        t.className = 'tag';
+        t.textContent = 'tag';
+        wrap.insertBefore(t, add);
+        wireEditableTag(t, card);
+        t.focus();
+        const r = document.createRange(); r.selectNodeContents(t);
+        const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      });
+      wrap.appendChild(add);
+    }
+  });
+}
+
+function disableTagEditing() {
+  document.querySelectorAll('.tag-add').forEach(b => b.remove());
+  document.querySelectorAll('.project-card__tags .tag').forEach(t => { t.contentEditable = 'false'; });
 }
 
 // ─── Auth ────────────────────────────────────────────────────
@@ -347,11 +542,33 @@ async function openDetailModal(card) {
       }
     }
   } else {
-    // Static card: show the wireframe aesthetic placeholder
-    const hue = card.dataset.hue || 'clay';
-    preview.className = `detail-modal__preview detail-modal__preview--${hue}`;
-    const label = card.querySelector('.project-card__label')?.textContent || '';
-    preview.innerHTML = `<span class="detail-modal__file-label">${label}</span>`;
+    // Static card — show uploaded media if present, else the wireframe placeholder
+    const key = card.dataset.cardKey;
+    const ov  = key !== undefined ? getCardOverride('3d-projects', key) : {};
+    if (ov.media) {
+      preview.className = 'detail-modal__preview';
+      const blob = await loadFile(staticFileId(key));
+      if (blob && ov.media.type === 'fbx') {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'detail-modal__canvas';
+        preview.appendChild(canvas);
+        const buf = await blob.arrayBuffer();
+        import('./fbx-viewer.js').then(({ initFBXViewer }) => {
+          initFBXViewer(canvas, buf).then(cleanup => { detailCleanup = cleanup; });
+        });
+      } else if (blob) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(blob);
+        img.className = 'detail-modal__img';
+        img.alt = title;
+        preview.appendChild(img);
+      }
+    } else {
+      const hue = card.dataset.hue || 'clay';
+      preview.className = `detail-modal__preview detail-modal__preview--${hue}`;
+      const label = card.querySelector('.project-card__label')?.textContent || '';
+      preview.innerHTML = `<span class="detail-modal__file-label">${label}</span>`;
+    }
   }
 
   openModal(modal);
@@ -736,11 +953,49 @@ function saveCV() {
   if (btn) { btn.textContent = 'Saved ✓'; setTimeout(() => { btn.textContent = 'Save CV'; }, 2000); }
 }
 
+async function exportCVAsPNG() {
+  const btn = document.getElementById('cv-export-btn');
+  if (typeof html2canvas !== 'function') {
+    alert('Export library is still loading — please try again in a moment.');
+    return;
+  }
+  if (btn) { btn.classList.add('is-busy'); btn.textContent = 'Rendering…'; }
+
+  // Hide floating UI so it doesn't appear in the capture
+  const hidden = ['.cv-actions', '.site-nav', '.editor-badge', '.editor-logout'];
+  const restore = [];
+  hidden.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+    restore.push([el, el.style.visibility]);
+    el.style.visibility = 'hidden';
+  }));
+
+  try {
+    const target = document.querySelector('.page-shell') || document.body;
+    const bg = getComputedStyle(document.body).backgroundColor || '#16151A';
+    const canvas = await html2canvas(target, { backgroundColor: bg, scale: 2, useCORS: true });
+    const a = document.createElement('a');
+    const name = (document.querySelector('[data-field="fullName"]')?.textContent || 'guanyu')
+      .trim().toLowerCase().replace(/\s+/g, '-');
+    a.download = `${name}-cv.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } catch (err) {
+    console.error(err);
+    alert('Could not export the CV. See console for details.');
+  } finally {
+    restore.forEach(([el, v]) => { el.style.visibility = v; });
+    if (btn) { btn.classList.remove('is-busy'); btn.textContent = 'Export PNG'; }
+  }
+}
+
 function wireCV() {
   if (PAGE !== 'cv') return;
 
   // Save button
   document.getElementById('cv-save-btn')?.addEventListener('click', saveCV);
+
+  // Export to PNG (available to everyone)
+  document.getElementById('cv-export-btn')?.addEventListener('click', exportCVAsPNG);
 
   // Photo upload
   const photoBlock = document.getElementById('cv-photo-block');
@@ -773,11 +1028,13 @@ const origDeactivate = deactivateEditor;
 function activateEditorFull() {
   origActivate();
   enableInlineEditing();
+  enableTagEditing();
   if (PAGE === 'cv') enableCVEditing();
 }
 function deactivateEditorFull() {
   origDeactivate();
   disableInlineEditing();
+  disableTagEditing();
   if (PAGE === 'cv') disableCVEditing();
 }
 
@@ -832,6 +1089,7 @@ async function init() {
   if (PAGE === '3d-projects') {
     injectAddContentBtn();
     await renderStoredProjects();
+    await enhanceStaticCards();
     wireProjectDetailClicks();
     document.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', () => setTimeout(refreshProjectFilter, 0));
@@ -853,6 +1111,7 @@ async function init() {
   initInlineText();
   if (isEditorActive()) {
     enableInlineEditing();
+    enableTagEditing();
     if (PAGE === 'cv') enableCVEditing();
   }
 }

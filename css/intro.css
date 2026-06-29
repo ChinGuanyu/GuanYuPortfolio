@@ -1,130 +1,121 @@
 /*
-  Intro page styling.
-  Layout concept: the canvas is fixed and full-bleed behind text.
-  Text "beats" scroll past on top of it — each beat is one full viewport
-  tall, centered, so there's always breathing room and a clean read,
-  while the 3D object behind keeps transforming continuously underneath.
+  Intro / landing page.
+  A single full-screen welcome: centered title + Enter button,
+  hand-drawn doodles floating quietly in the background.
 */
 
-#intro-canvas {
+.intro-body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(201, 123, 74, 0.07) 0%, transparent 60%),
+    var(--bg);
+}
+
+/* ── Doodle background ── */
+.doodles {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
   z-index: 0;
-  display: block;
-  background: transparent;
+  pointer-events: none;
 }
 
-#scroll-track {
+.doodles path,
+.doodles circle,
+.doodles ellipse {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.doodles .doodle--clay {
+  stroke: var(--clay);
+  opacity: 0.55;
+}
+.doodles .doodle--fill {
+  fill: var(--line);
+  stroke: none;
+}
+
+.doodles__set {
+  opacity: 0.7;
+  animation: doodle-float 14s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes doodle-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-14px); }
+}
+
+/* ── Landing content ── */
+.landing {
   position: relative;
   z-index: 1;
-}
-
-.beat {
-  min-height: 100vh;
+  text-align: center;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: var(--space-4);
   gap: var(--space-2);
+  max-width: 720px;
+  animation: landing-in 0.9s var(--ease-out) both;
+}
+@keyframes landing-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.beat .mono-label {
+.landing__eyebrow {
   margin-bottom: var(--space-1);
 }
 
-.hero-title {
-  font-size: clamp(2.5rem, 8vw, 5.5rem);
-  line-height: 1.05;
+.landing__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(2.6rem, 9vw, 6rem);
+  line-height: 1.02;
   color: var(--ink);
+  margin: 0;
 }
 
-.beat h2 {
-  font-size: clamp(1.75rem, 5vw, 3rem);
-  line-height: 1.15;
-  color: var(--ink);
-  /* Text gets a subtle backing so it stays legible regardless of what's
-     behind it in the 3D scene at that scroll position */
-  text-shadow: 0 2px 24px rgba(22, 21, 26, 0.6);
-}
-
-.scroll-hint {
-  margin-top: var(--space-3);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
+.landing__sub {
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
   color: var(--ink-dim);
-  animation: bob 2.2s ease-in-out infinite;
+  line-height: 1.6;
+  max-width: 38ch;
+  margin: var(--space-1) auto 0;
 }
 
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(6px); }
-}
-
-.beat--final {
-  gap: var(--space-3);
-}
-
+/* ── Enter button ── */
 .enter-btn {
-  margin-top: var(--space-2);
-  padding: 0.9rem 2.6rem;
+  margin-top: var(--space-3);
+  padding: 0.95rem 2.8rem;
   font-family: var(--font-mono);
   font-size: 0.9rem;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  text-decoration: none;
   color: var(--ink);
   background: transparent;
   border: 1px solid var(--clay);
   border-radius: 2px;
   cursor: pointer;
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.6s var(--ease-out), transform 0.6s var(--ease-out),
-              background 0.25s ease, color 0.25s ease;
-  pointer-events: none;
+  transition: background 0.25s ease, color 0.25s ease, transform 0.25s var(--ease-out), box-shadow 0.25s ease;
 }
-
-.enter-btn.is-ready {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.enter-btn:not(:disabled):hover {
+.enter-btn:hover {
   background: var(--clay);
   color: var(--bg);
-}
-
-.enter-btn:disabled {
-  cursor: default;
-}
-
-/* Fixed progress rail along the right edge — quiet, technical HUD feel */
-.progress-rail {
-  position: fixed;
-  right: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2px;
-  height: 120px;
-  background: var(--line);
-  z-index: 2;
-}
-
-.progress-rail__fill {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 0%;
-  background: var(--clay);
-  transition: height 0.1s linear;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(201, 123, 74, 0.3);
 }
 
 @media (max-width: 600px) {
-  .progress-rail { display: none; }
+  .doodles__set { opacity: 0.45; }
 }

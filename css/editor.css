@@ -309,12 +309,7 @@ body.editor-active .add-content-btn { display: inline-flex; }
   z-index: 5;
 }
 
-body.editor-active .project-card[data-dynamic] .card-editor-controls {
-  display: flex;
-}
-
-/* Show controls on card hover too */
-body.editor-active .project-card[data-dynamic]:hover .card-editor-controls {
+body.editor-active .project-card .card-editor-controls {
   display: flex;
 }
 
@@ -352,6 +347,77 @@ body.editor-active .project-card[data-dynamic]:hover .card-editor-controls {
   height: 100%;
   object-fit: cover;
 }
+
+/* When a static card has uploaded media, drop the placeholder grid/gradient */
+.project-card.has-media .project-card__thumb::before,
+.project-card.has-media .project-card__thumb::after {
+  display: none;
+}
+
+/* ── Static-card media uploader overlay ── */
+.thumb-upload {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: rgba(22, 21, 26, 0.72);
+  cursor: pointer;
+  text-align: center;
+  padding: var(--space-2);
+}
+body.editor-active .project-card__thumb:hover .thumb-upload {
+  display: flex;
+}
+.thumb-upload__pick {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--clay);
+}
+.thumb-upload__remove {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.thumb-upload__remove:hover { color: #e05a5a; border-color: #e05a5a; }
+.project-card.has-media .thumb-upload__remove { display: inline-block; }
+
+/* ── Editable tags ── */
+body.editor-active .project-card__tags .tag[contenteditable="true"] {
+  cursor: text;
+  min-width: 1.5rem;
+}
+body.editor-active .project-card__tags .tag[contenteditable="true"]:hover {
+  border-color: var(--clay);
+}
+body.editor-active .project-card__tags .tag[contenteditable="true"]:focus {
+  outline: none;
+  border-color: var(--clay);
+  color: var(--clay);
+}
+.tag-add {
+  cursor: pointer;
+  background: transparent;
+  border-style: dashed !important;
+  border-color: var(--clay) !important;
+  color: var(--clay) !important;
+  font-weight: 600;
+  line-height: 1;
+}
+.tag-add:hover { background: rgba(201, 123, 74, 0.08); }
 
 /* ── Post row editor controls ── */
 .post-row,
