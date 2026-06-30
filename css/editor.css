@@ -48,6 +48,20 @@ body.editor-active .editable-text:focus {
   box-shadow: inset 0 0 0 1px var(--clay);
 }
 
+/* ── Floating editor bar (pages without a nav, e.g. intro) ── */
+.editor-floatbar {
+  position: fixed;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+.editor-floatbar .editor-badge,
+.editor-floatbar .editor-logout { pointer-events: auto; }
+
 /* ── Modal backdrop ── */
 .editor-modal {
   position: fixed;

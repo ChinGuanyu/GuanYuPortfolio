@@ -61,6 +61,14 @@ function initInlineText() {
     apply(document.querySelector('.page-hero__sub'),   'hero-sub');
   }
 
+  // Intro / landing page
+  if (PAGE === 'intro') {
+    apply(document.querySelector('.landing__eyebrow'), 'landing-eyebrow');
+    apply(document.querySelector('.landing__title'),   'landing-title');
+    apply(document.querySelector('.landing__sub'),     'landing-sub');
+    apply(document.querySelector('.enter-btn'),        'landing-enter');
+  }
+
   // Static project cards — keyed by the stable data-card-key (survives deletions)
   if (PAGE === '3d-projects') {
     document.querySelectorAll('.project-card:not([data-dynamic])').forEach(card => {
@@ -486,23 +494,31 @@ function buildLoginModal() {
 
 // ─── Nav badge & logout ──────────────────────────────────────
 function injectNavControls() {
-  const nav = document.querySelector('.site-nav');
-  if (!nav) return;
+  // Prefer the page nav; pages without one (e.g. intro) get a floating bar.
+  let host = document.querySelector('.site-nav');
+  if (!host) {
+    host = document.querySelector('.editor-floatbar');
+    if (!host) {
+      host = document.createElement('div');
+      host.className = 'editor-floatbar';
+      document.body.appendChild(host);
+    }
+  }
 
   // Badge
-  if (!nav.querySelector('.editor-badge')) {
+  if (!host.querySelector('.editor-badge')) {
     const badge = document.createElement('span');
     badge.className = 'editor-badge';
     badge.textContent = 'Editing';
-    nav.appendChild(badge);
+    host.appendChild(badge);
   }
 
   // Logout (click handler wired centrally in init)
-  if (!nav.querySelector('.editor-logout')) {
+  if (!host.querySelector('.editor-logout')) {
     const logout = document.createElement('button');
     logout.className = 'editor-logout';
     logout.textContent = 'Exit Editor';
-    nav.appendChild(logout);
+    host.appendChild(logout);
   }
 }
 
@@ -1315,6 +1331,13 @@ async function init() {
   if (PAGE === 'cv') {
     loadCV();
     wireCV();
+  }
+
+  if (PAGE === 'intro') {
+    // In editor mode, clicking the Enter button should edit its label, not navigate
+    document.querySelector('.enter-btn')?.addEventListener('click', e => {
+      if (document.body.classList.contains('editor-active')) e.preventDefault();
+    });
   }
 
   // Tag editable text (page titles/descriptions, static cards) and apply
