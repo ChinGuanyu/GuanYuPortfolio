@@ -1,0 +1,105 @@
+/*
+  GuanYuPortfolio — Design Tokens
+  ---------------------------------
+  Direction: a sculptor's dark studio / 3D viewport.
+  The background reads like a modeling app's viewport — warm graphite,
+  never pure black — so an object placed on it feels lit, not pasted on.
+
+  Color:
+    --clay        #C97B4A   — signature accent: warm terracotta/clay, evokes
+                               raw sculpting material. Used sparingly: one
+                               button, one underline, one glow.
+    --bg          #16151A   — warm graphite, not pure black
+    --bg-raised   #1F1E25   — panels, cards
+    --line        #33323B   — hairline borders / dividers
+    --ink         #EDEAE2   — primary text, warm off-white (not pure white)
+    --ink-dim     #9A978F   — secondary text
+    --wire        #5B7A86   — cool desaturated teal — used ONLY for technical
+                               labels/wireframe-style annotations, never for
+                               body copy. Evokes viewport grid/axis lines.
+
+  Type:
+    display  — 'Fraunces' (serif, has a sculpted, carved-letterform quality
+               at high weights — used with restraint, large sizes only)
+    body     — 'Inter' (clean grotesque, does the talking)
+    mono     — 'JetBrains Mono' (technical labels, coordinates, captions —
+               reinforces the "viewport HUD" feeling)
+*/
+
+:root {
+  --clay: #C97B4A;
+  --clay-dim: #8a5535;
+  --bg: #16151A;
+  --bg-raised: #1F1E25;
+  --line: #33323B;
+  --ink: #EDEAE2;
+  --ink-dim: #9A978F;
+  --wire: #5B7A86;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2.5rem;
+  --space-5: 4rem;
+  --space-6: 7rem;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+p {
+  margin: 0;
+  color: var(--ink-dim);
+  line-height: 1.6;
+}
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wire);
+}
+
+a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* Respect reduced motion preference site-wide */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible keyboard focus, everywhere */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 3px;
+}

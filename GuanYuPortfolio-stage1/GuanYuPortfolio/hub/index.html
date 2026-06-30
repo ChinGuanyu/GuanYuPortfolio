@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GuanYu — Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;900&family=Inter:wght@400;500&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/tokens.css">
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      text-align: center;
+    }
+    h1 { font-size: clamp(2rem, 6vw, 3.5rem); }
+    .links { display: flex; gap: 1.5rem; }
+    .links a {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.8rem 1.8rem;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      transition: border-color 0.2s ease, color 0.2s ease;
+    }
+    .links a:hover { border-color: var(--clay); color: var(--clay); }
+  </style>
+</head>
+<body>
+  <p class="mono-label">guanyu — studio index</p>
+  <h1>You made it.</h1>
+  <div class="links">
+    <a href="../3d-projects/index.html">3D Projects →</a>
+    <a href="../blog/index.html">Blog →</a>
+  </div>
+</body>
+</html>
