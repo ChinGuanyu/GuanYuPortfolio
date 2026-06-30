@@ -155,6 +155,37 @@
       display: none;
     }
 
+    /* ── Awards section ── */
+    /* Hidden until it has at least one award — but always shown in editor mode */
+    .awards-section {
+      margin-top: 5rem;
+      display: none;
+    }
+    body.editor-active .awards-section,
+    .awards-section.has-cards,
+    .awards-section:has(.project-card) {
+      display: block;
+    }
+    .awards-head {
+      margin-bottom: var(--space-3);
+    }
+    .awards-head .section-eyebrow {
+      display: block;
+      margin-bottom: var(--space-1);
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.1;
+      margin: 0;
+    }
+    /* Empty award grid still reserves a little room in editor mode */
+    #award-grid:empty {
+      min-height: 0;
+    }
+
     @media (max-width: 600px) {
       .project-grid { grid-template-columns: 1fr; }
     }
@@ -276,6 +307,14 @@
         </div>
       </article>
 
+    </section>
+
+    <section class="awards-section">
+      <div class="awards-head">
+        <span class="mono-label section-eyebrow">recognition</span>
+        <h2 class="section-title">Awards</h2>
+      </div>
+      <div class="project-grid" id="award-grid"></div>
     </section>
   </div>
 

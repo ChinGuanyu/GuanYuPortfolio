@@ -69,6 +69,12 @@ function initInlineText() {
     apply(document.querySelector('.enter-btn'),        'landing-enter');
   }
 
+  // Awards section heading
+  if (PAGE === '3d-projects') {
+    apply(document.querySelector('.awards-section .section-title'), 'awards-title');
+    apply(document.querySelector('.awards-section .section-eyebrow'), 'awards-eyebrow');
+  }
+
   // Static project cards — keyed by the stable data-card-key (survives deletions)
   if (PAGE === '3d-projects') {
     document.querySelectorAll('.project-card:not([data-dynamic])').forEach(card => {
@@ -363,9 +369,10 @@ function persistCardTags(card) {
   const tags = [...card.querySelectorAll('.project-card__tags .tag:not(.tag-add)')]
     .map(t => t.textContent.replace(/\s*×\s*$/, '').trim()).filter(Boolean);
   if (card.dataset.entryId) {
-    const entries = getPageEntries('3d-projects');
+    const collection = card.dataset.collection || '3d-projects';
+    const entries = getPageEntries(collection);
     const entry = entries.find(e => e.id === card.dataset.entryId);
-    if (entry) { entry.tags = tags; savePageEntry('3d-projects', entry); }
+    if (entry) { entry.tags = tags; savePageEntry(collection, entry); }
   } else if (card.dataset.cardKey !== undefined) {
     setCardOverride('3d-projects', card.dataset.cardKey, { tags });
   }
@@ -526,12 +533,21 @@ function injectNavControls() {
 function injectAddContentBtn() {
   if (PAGE === '3d-projects') {
     const filterBar = document.querySelector('.filter-bar');
-    if (!filterBar || filterBar.nextElementSibling?.classList.contains('add-content-btn')) return;
-    const btn = document.createElement('button');
-    btn.className = 'add-content-btn';
-    btn.innerHTML = '+ Add Project';
-    btn.addEventListener('click', () => openUploadModal());
-    filterBar.after(btn);
+    if (filterBar && !filterBar.nextElementSibling?.classList.contains('add-content-btn')) {
+      const btn = document.createElement('button');
+      btn.className = 'add-content-btn';
+      btn.innerHTML = '+ Add Project';
+      btn.addEventListener('click', () => openUploadModal('3d-projects'));
+      filterBar.after(btn);
+    }
+    const awardGrid = document.getElementById('award-grid');
+    if (awardGrid && !awardGrid.previousElementSibling?.classList.contains('add-content-btn')) {
+      const abtn = document.createElement('button');
+      abtn.className = 'add-content-btn';
+      abtn.innerHTML = '+ Add Award';
+      abtn.addEventListener('click', () => openUploadModal('awards'));
+      awardGrid.before(abtn);
+    }
   }
   if (PAGE === 'blog') {
     const list = document.querySelector('.post-list');
@@ -605,7 +621,8 @@ async function openDetailModal(card) {
   preview.innerHTML = ''; // clear
 
   if (isDynamic) {
-    const entries = getPageEntries('3d-projects');
+    const collection = card.dataset.collection || '3d-projects';
+    const entries = getPageEntries(collection);
     const entry = entries.find(e => e.id === entryId);
     if (entry) {
       preview.className = 'detail-modal__preview';
@@ -657,9 +674,10 @@ async function openDetailModal(card) {
   openModal(modal);
 }
 
-function wireProjectDetailClicks() {
-  if (PAGE !== '3d-projects') return;
-  document.getElementById('project-grid').addEventListener('click', e => {
+function wireGridClicks(gridId) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.addEventListener('click', e => {
     // Don't open detail when clicking editor controls
     if (e.target.closest('.card-editor-controls')) return;
     // In editor mode, clicking an editable field should edit it, not open the modal
@@ -670,12 +688,13 @@ function wireProjectDetailClicks() {
 }
 
 // ─── Project card builder (dynamic) ──────────────────────────
-async function buildProjectCard(entry) {
+async function buildProjectCard(entry, collection = '3d-projects') {
   const card = document.createElement('article');
   card.className = 'project-card';
-  card.dataset.category = entry.category || '';
-  card.dataset.dynamic  = '1';
-  card.dataset.entryId  = entry.id;
+  card.dataset.category   = entry.category || '';
+  card.dataset.dynamic    = '1';
+  card.dataset.entryId    = entry.id;
+  card.dataset.collection = collection;
 
   const tags = (entry.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
   const catLabel = filterLabel(entry.category);
@@ -714,26 +733,30 @@ async function buildProjectCard(entry) {
 
   card.querySelector('.card-ctrl-btn--edit').addEventListener('click', e => {
     e.stopPropagation();
-    openEditProjectModal(entry);
+    openUploadModal(collection, entry);
   });
   card.querySelector('.card-ctrl-btn--delete').addEventListener('click', async e => {
     e.stopPropagation();
     if (!confirm(`Delete "${entry.title}"?`)) return;
     if (entry.type === 'fbx' && entry.fileId) await deleteFile(entry.fileId).catch(() => {});
     for (const im of entryImages(entry)) await deleteFile(im.fileId).catch(() => {});
-    deletePageEntry('3d-projects', entry.id);
+    deletePageEntry(collection, entry.id);
     card.remove();
   });
 
   return card;
 }
 
-async function renderStoredProjects() {
-  const grid = document.getElementById('project-grid');
+async function renderCollection(collection, gridId) {
+  const grid = document.getElementById(gridId);
   if (!grid) return;
-  for (const entry of getPageEntries('3d-projects')) {
-    grid.prepend(await buildProjectCard(entry));
+  for (const entry of getPageEntries(collection)) {
+    grid.prepend(await buildProjectCard(entry, collection));
   }
+}
+
+async function renderStoredProjects() {
+  await renderCollection('3d-projects', 'project-grid');
   refreshProjectFilter();
 }
 
@@ -849,11 +872,13 @@ function startRenameFilter(btn) {
 }
 
 // ─── Upload modal (multi-image carousel + optional .fbx) ──────
-async function openUploadModal(prefill = null) {
+async function openUploadModal(collection = '3d-projects', prefill = null) {
   const old = document.getElementById('editor-upload-modal');
   if (old) old.remove();
 
-  const modal = buildModal('editor-upload-modal', prefill ? 'Edit Project' : 'Add Project', true);
+  const isAwards  = collection === 'awards';
+  const singular  = isAwards ? 'Award' : 'Project';
+  const modal = buildModal('editor-upload-modal', `${prefill ? 'Edit' : 'Add'} ${singular}`, true);
   const body  = modal.querySelector('.editor-modal__body');
   const p     = prefill || {};
 
@@ -881,10 +906,11 @@ async function openUploadModal(prefill = null) {
         <textarea id="up-desc">${p.description || ''}</textarea>
       </div>
       <div class="editor-field__row">
+        ${isAwards ? '' : `
         <div class="editor-field">
           <label for="up-category">Category (your filter tags)</label>
           <select id="up-category">${categoryOptionsHTML(p.category)}</select>
-        </div>
+        </div>`}
         <div class="editor-field">
           <label for="up-tags">Tags (comma-separated)</label>
           <input id="up-tags" type="text" value="${(p.tags||[]).join(', ')}">
@@ -892,7 +918,7 @@ async function openUploadModal(prefill = null) {
       </div>
       <div class="editor-btn-row">
         <button type="button" class="editor-btn editor-btn--ghost" id="upload-cancel">Cancel</button>
-        <button type="submit" class="editor-btn editor-btn--primary">${prefill ? 'Save Changes' : 'Add to Portfolio'}</button>
+        <button type="submit" class="editor-btn editor-btn--primary">${prefill ? 'Save Changes' : 'Add ' + singular}</button>
       </div>
     </form>`;
 
@@ -984,7 +1010,7 @@ async function openUploadModal(prefill = null) {
       id:          p.id || genId(),
       title,
       description: document.getElementById('up-desc').value.trim(),
-      category:    document.getElementById('up-category').value,
+      category:    document.getElementById('up-category')?.value || '',
       year:        document.getElementById('up-year').value.trim(),
       tags:        document.getElementById('up-tags').value.split(',').map(t => t.trim()).filter(Boolean),
     };
@@ -1010,20 +1036,18 @@ async function openUploadModal(prefill = null) {
 
     for (const fid of removedExisting) await deleteFile(fid).catch(() => {});
 
-    savePageEntry('3d-projects', entry);
+    savePageEntry(collection, entry);
     closeModal(modal);
 
     document.querySelector(`.project-card[data-entry-id="${entry.id}"]`)?.remove();
-    document.getElementById('project-grid').prepend(await buildProjectCard(entry));
-    refreshProjectFilter();
+    const gridId = isAwards ? 'award-grid' : 'project-grid';
+    document.getElementById(gridId).prepend(await buildProjectCard(entry, collection));
+    if (isAwards) document.querySelector('.awards-section')?.classList.add('has-cards');
+    else refreshProjectFilter();
   });
 
   renderStrip();
   openModal(modal);
-}
-
-function openEditProjectModal(entry) {
-  openUploadModal(entry);
 }
 
 // ─── Blog ─────────────────────────────────────────────────────
@@ -1318,7 +1342,11 @@ async function init() {
     injectAddContentBtn();
     await renderStoredProjects();
     await enhanceStaticCards();
-    wireProjectDetailClicks();
+    await renderCollection('awards', 'award-grid');
+    if (document.querySelector('#award-grid .project-card'))
+      document.querySelector('.awards-section')?.classList.add('has-cards');
+    wireGridClicks('project-grid');
+    wireGridClicks('award-grid');
     wireFilterBar();
     renderFilterBar();
   }
