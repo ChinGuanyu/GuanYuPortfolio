@@ -175,11 +175,7 @@
 
   <div class="page-content">
     <div class="filter-bar" role="group" aria-label="Filter projects by category">
-      <button class="filter-btn is-active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="character">Character</button>
-      <button class="filter-btn" data-filter="environment">Environment</button>
-      <button class="filter-btn" data-filter="product">Product</button>
-      <button class="filter-btn" data-filter="motion">Motion</button>
+      <button class="filter-btn is-active" data-filter="all"><span class="filter-btn__label">All</span></button>
     </div>
 
     <section class="project-grid" id="project-grid">
@@ -291,21 +287,6 @@
       <a href="../hub/">Hub</a>
     </nav>
   </footer>
-
-  <script>
-    // Static filter — editor.js re-wires dynamic cards after it loads
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        const filter = btn.dataset.filter;
-        document.querySelectorAll('.project-card').forEach(card => {
-          card.classList.toggle('is-hidden',
-            filter !== 'all' && card.dataset.category !== filter);
-        });
-      });
-    });
-  </script>
 
   <script type="importmap">
     {

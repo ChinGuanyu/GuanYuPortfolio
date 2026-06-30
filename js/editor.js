@@ -37,6 +37,8 @@ function savePageEntry(p, e)  {
 }
 function deletePageEntry(p,id){ const m=loadMeta(); if(m[p]) m[p]=m[p].filter(e=>e.id!==id); saveMeta(m); }
 function genId()              { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function escapeHtml(s)        { return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
+function selectAllText(el)    { const r = document.createRange(); r.selectNodeContents(el); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); }
 
 // ─── Inline text editing (page titles, descriptions, static cards) ──
 function loadTextStore()  { return db.getContent(TEXT_KEY, {}); }
@@ -655,19 +657,20 @@ function wireProjectDetailClicks() {
 async function buildProjectCard(entry) {
   const card = document.createElement('article');
   card.className = 'project-card';
-  card.dataset.category = entry.category || 'other';
+  card.dataset.category = entry.category || '';
   card.dataset.dynamic  = '1';
   card.dataset.entryId  = entry.id;
 
   const tags = (entry.tags || []).map(t => `<span class="tag">${t}</span>`).join('');
-  const cat  = entry.category ? entry.category.charAt(0).toUpperCase() + entry.category.slice(1) : 'Work';
+  const catLabel = filterLabel(entry.category);
+  const metaPrefix = catLabel ? `${escapeHtml(catLabel)} — ` : '';
 
   card.innerHTML = `
     <div class="project-card__thumb">
       <span class="project-card__label">// ${entry.fileName || 'upload'}</span>
     </div>
     <div class="project-card__body">
-      <p class="mono-label project-card__meta">${cat} — ${entry.year || new Date().getFullYear()}</p>
+      <p class="mono-label project-card__meta">${metaPrefix}${entry.year || new Date().getFullYear()}</p>
       <h2 class="project-card__title">${entry.title}</h2>
       <p class="project-card__desc">${entry.description || ''}</p>
       <div class="project-card__tags">${tags}</div>
@@ -727,6 +730,108 @@ function refreshProjectFilter() {
   });
 }
 
+// ─── User-defined filter tags ────────────────────────────────
+const FILTERS_KEY = 'gyu_filters';
+function loadFilters()      { return db.getContent(FILTERS_KEY, []); }
+function saveFilters(list)  { db.setContent(FILTERS_KEY, list); }
+function filterLabel(id)    { const f = loadFilters().find(x => x.id === id); return f ? f.label : ''; }
+
+function categoryOptionsHTML(selectedId) {
+  return `<option value="">— Uncategorized —</option>` +
+    loadFilters().map(f =>
+      `<option value="${f.id}" ${f.id === selectedId ? 'selected' : ''}>${escapeHtml(f.label)}</option>`
+    ).join('');
+}
+
+function renderFilterBar() {
+  const bar = document.querySelector('.filter-bar');
+  if (!bar) return;
+  const prevActive = bar.querySelector('.filter-btn.is-active')?.dataset.filter || 'all';
+  const filters = loadFilters();
+
+  bar.innerHTML =
+    `<button class="filter-btn" data-filter="all"><span class="filter-btn__label">All</span></button>` +
+    filters.map(f => `
+      <span class="filter-item">
+        <button class="filter-btn" data-filter="${f.id}"><span class="filter-btn__label">${escapeHtml(f.label)}</span></button>
+        <button class="filter-del" data-id="${f.id}" type="button" title="Delete filter" aria-label="Delete filter">×</button>
+      </span>`).join('') +
+    `<button class="filter-add" type="button" title="Add filter" aria-label="Add filter">+</button>`;
+
+  const active = bar.querySelector(`.filter-btn[data-filter="${prevActive}"]`)
+              || bar.querySelector('.filter-btn[data-filter="all"]');
+  active?.classList.add('is-active');
+  refreshProjectFilter();
+}
+
+let filterBarWired = false;
+function wireFilterBar() {
+  const bar = document.querySelector('.filter-bar');
+  if (!bar || filterBarWired) return;
+  filterBarWired = true;
+
+  bar.addEventListener('click', e => {
+    if (e.target.closest('.filter-add')) { addFilter(); return; }
+    const del = e.target.closest('.filter-del');
+    if (del) { e.stopPropagation(); deleteFilter(del.dataset.id); return; }
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+    const label = btn.querySelector('.filter-btn__label');
+    if (label?.isContentEditable) return;   // mid-rename
+    bar.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    refreshProjectFilter();
+  });
+
+  bar.addEventListener('dblclick', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn || btn.dataset.filter === 'all') return;
+    if (!document.body.classList.contains('editor-active')) return;
+    startRenameFilter(btn);
+  });
+}
+
+function addFilter() {
+  if (!document.body.classList.contains('editor-active')) return;
+  const filters = loadFilters();
+  const f = { id: genId(), label: 'New' };
+  filters.push(f);
+  saveFilters(filters);
+  renderFilterBar();
+  const btn = document.querySelector(`.filter-btn[data-filter="${f.id}"]`);
+  if (btn) startRenameFilter(btn);
+}
+
+function deleteFilter(id) {
+  if (!confirm('Delete this filter tag?')) return;
+  saveFilters(loadFilters().filter(f => f.id !== id));
+  renderFilterBar();
+}
+
+function renameFilter(id, label) {
+  const filters = loadFilters();
+  const f = filters.find(x => x.id === id);
+  if (!f) return;
+  f.label = label;
+  saveFilters(filters);
+}
+
+function startRenameFilter(btn) {
+  const label = btn.querySelector('.filter-btn__label');
+  if (!label) return;
+  label.contentEditable = 'true';
+  label.focus();
+  selectAllText(label);
+  const finish = () => {
+    label.contentEditable = 'false';
+    const text = label.textContent.trim() || 'Untitled';
+    label.textContent = text;
+    renameFilter(btn.dataset.filter, text);
+  };
+  label.addEventListener('blur', finish, { once: true });
+  label.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); label.blur(); } });
+}
+
 // ─── Upload modal (multi-image carousel + optional .fbx) ──────
 async function openUploadModal(prefill = null) {
   const old = document.getElementById('editor-upload-modal');
@@ -761,12 +866,8 @@ async function openUploadModal(prefill = null) {
       </div>
       <div class="editor-field__row">
         <div class="editor-field">
-          <label for="up-category">Category</label>
-          <select id="up-category">
-            ${['character','environment','product','motion','other'].map(c =>
-              `<option value="${c}" ${p.category===c?'selected':''}>${c.charAt(0).toUpperCase()+c.slice(1)}</option>`
-            ).join('')}
-          </select>
+          <label for="up-category">Category (your filter tags)</label>
+          <select id="up-category">${categoryOptionsHTML(p.category)}</select>
         </div>
         <div class="editor-field">
           <label for="up-tags">Tags (comma-separated)</label>
@@ -1202,9 +1303,8 @@ async function init() {
     await renderStoredProjects();
     await enhanceStaticCards();
     wireProjectDetailClicks();
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => setTimeout(refreshProjectFilter, 0));
-    });
+    wireFilterBar();
+    renderFilterBar();
   }
 
   if (PAGE === 'blog') {

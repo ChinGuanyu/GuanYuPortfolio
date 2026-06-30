@@ -395,6 +395,55 @@ body.editor-active .project-card__thumb:hover .thumb-upload {
 .thumb-upload__remove:hover { color: #e05a5a; border-color: #e05a5a; }
 .project-card.has-media .thumb-upload__remove { display: inline-block; }
 
+/* ── User-defined filter tags ── */
+.filter-item { position: relative; display: inline-flex; }
+
+.filter-del {
+  display: none;
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-raised);
+  color: var(--ink-dim);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  z-index: 2;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.filter-del:hover { color: #e05a5a; border-color: #e05a5a; }
+body.editor-active .filter-del { display: flex; }
+
+.filter-add {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0.45rem 0.9rem;
+  background: transparent;
+  border: 1px dashed var(--clay);
+  border-radius: 2px;
+  color: var(--clay);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.filter-add:hover { background: rgba(201, 123, 74, 0.08); }
+body.editor-active .filter-add { display: inline-flex; align-items: center; }
+
+.filter-btn__label[contenteditable="true"] {
+  outline: none;
+  min-width: 1ch;
+}
+body.editor-active .filter-btn[data-filter]:not([data-filter="all"]) .filter-btn__label {
+  cursor: text;
+}
+
 /* ── Image carousel ── */
 .carousel {
   position: absolute;
