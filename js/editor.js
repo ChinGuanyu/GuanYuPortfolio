@@ -1229,6 +1229,29 @@ function saveCV() {
   if (btn) { btn.textContent = 'Saved ✓'; setTimeout(() => { btn.textContent = 'Save CV'; }, 2000); }
 }
 
+function cvFileName(ext) {
+  const name = (document.querySelector('[data-field="fullName"]')?.textContent || 'guanyu')
+    .trim().toLowerCase().replace(/\s+/g, '-') || 'guanyu';
+  return `${name}-cv.${ext}`;
+}
+
+// Render the whole CV to a canvas, hiding floating UI during the capture.
+async function captureCVCanvas() {
+  const hidden = ['.cv-actions', '.site-nav', '.editor-badge', '.editor-logout', '.editor-floatbar'];
+  const restore = [];
+  hidden.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+    restore.push([el, el.style.visibility]);
+    el.style.visibility = 'hidden';
+  }));
+  try {
+    const target = document.querySelector('.page-shell') || document.body;
+    const bg = getComputedStyle(document.body).backgroundColor || '#16151A';
+    return await html2canvas(target, { backgroundColor: bg, scale: 2, useCORS: true });
+  } finally {
+    restore.forEach(([el, v]) => { el.style.visibility = v; });
+  }
+}
+
 async function exportCVAsPNG() {
   const btn = document.getElementById('cv-export-btn');
   if (typeof html2canvas !== 'function') {
@@ -1236,31 +1259,55 @@ async function exportCVAsPNG() {
     return;
   }
   if (btn) { btn.classList.add('is-busy'); btn.textContent = 'Rendering…'; }
-
-  // Hide floating UI so it doesn't appear in the capture
-  const hidden = ['.cv-actions', '.site-nav', '.editor-badge', '.editor-logout'];
-  const restore = [];
-  hidden.forEach(sel => document.querySelectorAll(sel).forEach(el => {
-    restore.push([el, el.style.visibility]);
-    el.style.visibility = 'hidden';
-  }));
-
   try {
-    const target = document.querySelector('.page-shell') || document.body;
-    const bg = getComputedStyle(document.body).backgroundColor || '#16151A';
-    const canvas = await html2canvas(target, { backgroundColor: bg, scale: 2, useCORS: true });
+    const canvas = await captureCVCanvas();
     const a = document.createElement('a');
-    const name = (document.querySelector('[data-field="fullName"]')?.textContent || 'guanyu')
-      .trim().toLowerCase().replace(/\s+/g, '-');
-    a.download = `${name}-cv.png`;
+    a.download = cvFileName('png');
     a.href = canvas.toDataURL('image/png');
     a.click();
   } catch (err) {
     console.error(err);
     alert('Could not export the CV. See console for details.');
   } finally {
-    restore.forEach(([el, v]) => { el.style.visibility = v; });
     if (btn) { btn.classList.remove('is-busy'); btn.textContent = 'Export PNG'; }
+  }
+}
+
+async function exportCVAsPDF() {
+  const btn = document.getElementById('cv-pdf-btn');
+  const jsPDFCtor = window.jspdf?.jsPDF;
+  if (typeof html2canvas !== 'function' || !jsPDFCtor) {
+    alert('Export libraries are still loading — please try again in a moment.');
+    return;
+  }
+  if (btn) { btn.classList.add('is-busy'); btn.textContent = 'Building…'; }
+  try {
+    const canvas = await captureCVCanvas();
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    // Scale the capture to A4 width and paginate down across A4 pages.
+    const pdf = new jsPDFCtor({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const imgW = pageW;
+    const imgH = canvas.height * (pageW / canvas.width);
+
+    let position = 0;
+    let heightLeft = imgH;
+    pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+    heightLeft -= pageH;
+    while (heightLeft > 0) {
+      position -= pageH;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+      heightLeft -= pageH;
+    }
+    pdf.save(cvFileName('pdf'));
+  } catch (err) {
+    console.error(err);
+    alert('Could not export the CV as PDF. See console for details.');
+  } finally {
+    if (btn) { btn.classList.remove('is-busy'); btn.textContent = 'Export PDF'; }
   }
 }
 
@@ -1270,7 +1317,8 @@ function wireCV() {
   // Save button
   document.getElementById('cv-save-btn')?.addEventListener('click', saveCV);
 
-  // Export to PNG (available to everyone)
+  // Export to PDF / PNG (available to everyone)
+  document.getElementById('cv-pdf-btn')?.addEventListener('click', exportCVAsPDF);
   document.getElementById('cv-export-btn')?.addEventListener('click', exportCVAsPNG);
 
   // Photo upload
