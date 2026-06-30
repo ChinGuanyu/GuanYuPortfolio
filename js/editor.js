@@ -130,6 +130,8 @@ function setCardOverride(page, key, patch) {
 }
 const staticFileId = key => `static-3d-projects-${key}`;
 const isImageName  = n => /\.(png|jpe?g|webp|gif|avif)$/i.test(n || '');
+const isVideoName  = n => /\.(mp4|webm|ogg|ogv|mov|m4v)$/i.test(n || '');
+const mediaKind    = n => (isVideoName(n) ? 'video' : 'image');
 
 // Normalize an entry's images to [{fileId, fileName}] (back-compat with a single fileId).
 function entryImages(entry) {
@@ -154,54 +156,79 @@ async function removeStaticMediaFiles(key, media) {
   }
 }
 
-// Build an auto-playing image carousel element from [{fileId, fileName}].
-// Returns null if no images load. The element gets a ._cleanup() to stop the
-// timer and revoke object URLs.
-async function buildImageCarousel(imageList, { contain = false } = {}) {
-  const urls = [];
-  for (const im of imageList) {
-    const blob = await loadFile(im.fileId);
-    if (blob) urls.push(URL.createObjectURL(blob));
+// Build an auto-playing carousel of images and/or videos from
+// [{fileId, fileName, kind?}]. Returns null if nothing loads. The element gets
+// a ._cleanup() to stop the timer, pause videos, and revoke object URLs.
+// Options: contain (object-fit), videoControls (play controls on video slides).
+async function buildImageCarousel(mediaList, { contain = false, videoControls = false } = {}) {
+  const items = [];
+  for (const m of mediaList) {
+    const blob = await loadFile(m.fileId);
+    if (blob) items.push({ url: URL.createObjectURL(blob), kind: m.kind || mediaKind(m.fileName) });
   }
-  if (!urls.length) return null;
+  if (!items.length) return null;
 
+  const hasVideo = items.some(it => it.kind === 'video');
   const car = document.createElement('div');
   car.className = 'carousel' + (contain ? ' carousel--contain' : '');
 
   const track = document.createElement('div');
   track.className = 'carousel__track';
-  urls.forEach((u, i) => {
-    const img = document.createElement('img');
-    img.className = 'carousel__slide' + (i === 0 ? ' is-active' : '');
-    img.src = u; img.alt = '';
-    track.appendChild(img);
+  const slides = [];
+  items.forEach((it, i) => {
+    let el;
+    if (it.kind === 'video') {
+      el = document.createElement('video');
+      el.src = it.url;
+      el.playsInline = true;
+      el.preload = 'metadata';
+      if (videoControls) el.controls = true; else el.muted = true;
+    } else {
+      el = document.createElement('img');
+      el.src = it.url;
+      el.alt = '';
+    }
+    el.className = 'carousel__slide' + (i === 0 ? ' is-active' : '');
+    track.appendChild(el);
+    slides.push(el);
   });
   car.appendChild(track);
 
-  const slides = [...track.children];
+  // Hint that a slide is a playable video when controls are hidden (thumbnails)
+  if (hasVideo && !videoControls) {
+    const play = document.createElement('span');
+    play.className = 'carousel__play';
+    play.textContent = '▶';
+    car.appendChild(play);
+  }
+
   const dots = [];
   let idx = 0, timer = null;
-  const show  = n => {
+  const show = n => {
     idx = (n + slides.length) % slides.length;
-    slides.forEach((s, i) => s.classList.toggle('is-active', i === idx));
-    dots.forEach((d, i)  => d.classList.toggle('is-active', i === idx));
+    slides.forEach((s, i) => {
+      s.classList.toggle('is-active', i === idx);
+      if (s.tagName === 'VIDEO' && i !== idx) s.pause();
+    });
+    dots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
   };
   const stop  = () => { if (timer) { clearInterval(timer); timer = null; } };
-  const start = () => { if (urls.length > 1 && !timer) timer = setInterval(() => show(idx + 1), 4000); };
+  // Auto-advance only for all-image carousels (videos play on their own time)
+  const start = () => { if (slides.length > 1 && !hasVideo && !timer) timer = setInterval(() => show(idx + 1), 4000); };
 
-  if (urls.length > 1) {
+  if (slides.length > 1) {
     const prev = document.createElement('button');
     prev.type = 'button'; prev.className = 'carousel__nav carousel__prev';
-    prev.setAttribute('aria-label', 'Previous image'); prev.textContent = '‹';
+    prev.setAttribute('aria-label', 'Previous'); prev.textContent = '‹';
     const next = document.createElement('button');
     next.type = 'button'; next.className = 'carousel__nav carousel__next';
-    next.setAttribute('aria-label', 'Next image'); next.textContent = '›';
+    next.setAttribute('aria-label', 'Next'); next.textContent = '›';
     prev.addEventListener('click', e => { e.stopPropagation(); stop(); show(idx - 1); });
     next.addEventListener('click', e => { e.stopPropagation(); stop(); show(idx + 1); });
 
     const dotWrap = document.createElement('div');
     dotWrap.className = 'carousel__dots';
-    urls.forEach((_, i) => {
+    items.forEach((_, i) => {
       const d = document.createElement('button');
       d.type = 'button';
       d.className = 'carousel__dot' + (i === 0 ? ' is-active' : '');
@@ -215,7 +242,11 @@ async function buildImageCarousel(imageList, { contain = false } = {}) {
     start();
   }
 
-  car._cleanup = () => { stop(); urls.forEach(u => URL.revokeObjectURL(u)); };
+  car._cleanup = () => {
+    stop();
+    slides.forEach(s => { if (s.tagName === 'VIDEO') s.pause(); });
+    items.forEach(it => URL.revokeObjectURL(it.url));
+  };
   return car;
 }
 
@@ -290,9 +321,9 @@ function setupStaticCardControls(card, key) {
     const overlay = document.createElement('div');
     overlay.className = 'thumb-upload';
     overlay.innerHTML = `
-      <span class="thumb-upload__pick">⬆ Upload images / .fbx</span>
+      <span class="thumb-upload__pick">⬆ Upload images / video / .fbx</span>
       <button type="button" class="thumb-upload__remove">Remove media</button>
-      <input type="file" accept=".fbx,.png,.jpg,.jpeg,.webp,.gif,.avif" multiple hidden>`;
+      <input type="file" accept=".fbx,.png,.jpg,.jpeg,.webp,.gif,.avif,.mp4,.webm,.ogg,.ogv,.mov,.m4v" multiple hidden>`;
     const input  = overlay.querySelector('input');
     const remove = overlay.querySelector('.thumb-upload__remove');
 
@@ -316,16 +347,16 @@ function setupStaticCardControls(card, key) {
         await saveFile(fileId, fbx);
         media = { type: 'fbx', fileId, fileName: fbx.name };
       } else {
-        const imgs = files.filter(f => isImageName(f.name));
+        const imgs = files.filter(f => isImageName(f.name) || isVideoName(f.name));
         if (!imgs.length) return;
-        // append to an existing image carousel, or start a new one
+        // append to an existing carousel, or start a new one
         const existing = (prev && prev.type === 'image') ? staticMediaImages(key, prev) : [];
         if (prev && prev.type === 'fbx') await removeStaticMediaFiles(key, prev);
         const added = [];
         for (const f of imgs) {
           const fileId = genId();
           await saveFile(fileId, f);
-          added.push({ fileId, fileName: f.name });
+          added.push({ fileId, fileName: f.name, kind: mediaKind(f.name) });
         }
         const images = [...existing, ...added];
         media = { type: 'image', images, fileName: images[0]?.fileName };
@@ -638,7 +669,7 @@ async function openDetailModal(card) {
           });
         }
       } else {
-        const car = await buildImageCarousel(entryImages(entry), { contain: true });
+        const car = await buildImageCarousel(entryImages(entry), { contain: true, videoControls: true });
         if (car) { preview.appendChild(car); detailCleanup = car._cleanup; }
       }
     }
@@ -660,7 +691,7 @@ async function openDetailModal(card) {
           });
         }
       } else {
-        const car = await buildImageCarousel(staticMediaImages(key, ov.media), { contain: true });
+        const car = await buildImageCarousel(staticMediaImages(key, ov.media), { contain: true, videoControls: true });
         if (car) { preview.appendChild(car); detailCleanup = car._cleanup; }
       }
     } else {
@@ -886,9 +917,9 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
     <form class="editor-form" id="upload-form" novalidate>
       <div class="upload-dropzone" id="upload-dropzone">
         <span class="upload-dropzone__icon">⬆</span>
-        <span class="upload-dropzone__label">Drop images (or a .fbx) here, or click to browse</span>
-        <span class="upload-dropzone__sub">Multiple images become a carousel · .fbx · .png · .jpg · .webp</span>
-        <input type="file" id="upload-file-input" accept=".fbx,.png,.jpg,.jpeg,.webp,.gif,.avif" multiple style="display:none">
+        <span class="upload-dropzone__label">Drop images, videos, or a .fbx here, or click to browse</span>
+        <span class="upload-dropzone__sub">Images &amp; videos become a carousel · .fbx · .mp4 · .png · .jpg · .webp</span>
+        <input type="file" id="upload-file-input" accept=".fbx,.png,.jpg,.jpeg,.webp,.gif,.avif,.mp4,.webm,.ogg,.ogv,.mov,.m4v" multiple style="display:none">
       </div>
       <div class="upload-media-strip" id="upload-media-strip"></div>
       <div class="editor-field__row">
@@ -934,7 +965,11 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
   } else {
     for (const im of entryImages(p)) {
       const blob = await loadFile(im.fileId);
-      imageSlides.push({ fileId: im.fileId, fileName: im.fileName, url: blob ? URL.createObjectURL(blob) : '' });
+      imageSlides.push({
+        fileId: im.fileId, fileName: im.fileName,
+        kind: im.kind || mediaKind(im.fileName),
+        url: blob ? URL.createObjectURL(blob) : '',
+      });
     }
   }
 
@@ -956,7 +991,10 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
     imageSlides.forEach((s, i) => {
       const chip = document.createElement('div');
       chip.className = 'media-chip media-chip--img';
-      chip.innerHTML = `<img src="${s.url}" alt=""><button type="button" class="media-chip__x" aria-label="Remove">×</button>`;
+      const inner = s.kind === 'video'
+        ? `<video src="${s.url}" muted preload="metadata"></video><span class="media-chip__badge">▶</span>`
+        : `<img src="${s.url}" alt="">`;
+      chip.innerHTML = `${inner}<button type="button" class="media-chip__x" aria-label="Remove">×</button>`;
       chip.querySelector('.media-chip__x').addEventListener('click', () => {
         if (s.fileId && !s.file) removedExisting.push(s.fileId);
         if (s.url && s.file) URL.revokeObjectURL(s.url);
@@ -976,10 +1014,10 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
       imageSlides = [];
       fbxSlide = { file: fbx, fileName: fbx.name };
     } else {
-      const imgs = files.filter(f => isImageName(f.name));
-      if (!imgs.length) return;
+      const media = files.filter(f => isImageName(f.name) || isVideoName(f.name));
+      if (!media.length) return;
       if (fbxSlide) { if (fbxSlide.fileId && !fbxSlide.file) removedExisting.push(fbxSlide.fileId); fbxSlide = null; }
-      imgs.forEach(f => imageSlides.push({ file: f, fileName: f.name, url: URL.createObjectURL(f) }));
+      media.forEach(f => imageSlides.push({ file: f, fileName: f.name, kind: mediaKind(f.name), url: URL.createObjectURL(f) }));
     }
     renderStrip();
   }
@@ -1025,8 +1063,9 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
     } else {
       const images = [];
       for (const s of imageSlides) {
-        if (s.file) { const fid = genId(); await saveFile(fid, s.file); images.push({ fileId: fid, fileName: s.fileName }); }
-        else images.push({ fileId: s.fileId, fileName: s.fileName });
+        const kind = s.kind || mediaKind(s.fileName);
+        if (s.file) { const fid = genId(); await saveFile(fid, s.file); images.push({ fileId: fid, fileName: s.fileName, kind }); }
+        else images.push({ fileId: s.fileId, fileName: s.fileName, kind });
       }
       entry.type = 'image';
       entry.images = images;
