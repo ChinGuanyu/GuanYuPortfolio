@@ -181,8 +181,15 @@ async function buildImageCarousel(mediaList, { contain = false, videoControls = 
       el = document.createElement('video');
       el.src = it.url;
       el.playsInline = true;
-      el.preload = 'metadata';
-      if (videoControls) el.controls = true; else el.muted = true;
+      if (videoControls) {
+        el.controls = true;
+        el.preload = 'metadata';
+      } else {
+        // Thumbnail: mute + nudge to the first frame so it isn't a black box
+        el.muted = true;
+        el.preload = 'auto';
+        el.addEventListener('loadeddata', () => { try { if (!el.currentTime) el.currentTime = 0.05; } catch {} }, { once: true });
+      }
     } else {
       el = document.createElement('img');
       el.src = it.url;
@@ -1044,45 +1051,52 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
     const submit = e.target.querySelector('button[type="submit"]');
     submit.disabled = true; submit.textContent = 'Saving…';
 
-    const entry = {
-      id:          p.id || genId(),
-      title,
-      description: document.getElementById('up-desc').value.trim(),
-      category:    document.getElementById('up-category')?.value || '',
-      year:        document.getElementById('up-year').value.trim(),
-      tags:        document.getElementById('up-tags').value.split(',').map(t => t.trim()).filter(Boolean),
-    };
+    try {
+      const entry = {
+        id:          p.id || genId(),
+        title,
+        description: document.getElementById('up-desc').value.trim(),
+        category:    document.getElementById('up-category')?.value || '',
+        year:        document.getElementById('up-year').value.trim(),
+        tags:        document.getElementById('up-tags').value.split(',').map(t => t.trim()).filter(Boolean),
+      };
 
-    if (fbxSlide) {
-      let fileId = fbxSlide.fileId;
-      if (fbxSlide.file) { fileId = fbxSlide.fileId || genId(); await saveFile(fileId, fbxSlide.file); }
-      entry.type = 'fbx';
-      entry.fileId = fileId;
-      entry.fileName = fbxSlide.fileName;
-      entry.images = [];
-    } else {
-      const images = [];
-      for (const s of imageSlides) {
-        const kind = s.kind || mediaKind(s.fileName);
-        if (s.file) { const fid = genId(); await saveFile(fid, s.file); images.push({ fileId: fid, fileName: s.fileName, kind }); }
-        else images.push({ fileId: s.fileId, fileName: s.fileName, kind });
+      if (fbxSlide) {
+        let fileId = fbxSlide.fileId;
+        if (fbxSlide.file) { fileId = fbxSlide.fileId || genId(); await saveFile(fileId, fbxSlide.file); }
+        entry.type = 'fbx';
+        entry.fileId = fileId;
+        entry.fileName = fbxSlide.fileName;
+        entry.images = [];
+      } else {
+        const images = [];
+        for (const s of imageSlides) {
+          const kind = s.kind || mediaKind(s.fileName);
+          if (s.file) { const fid = genId(); await saveFile(fid, s.file); images.push({ fileId: fid, fileName: s.fileName, kind }); }
+          else images.push({ fileId: s.fileId, fileName: s.fileName, kind });
+        }
+        entry.type = 'image';
+        entry.images = images;
+        entry.fileName = images[0]?.fileName;
+        delete entry.fileId;
       }
-      entry.type = 'image';
-      entry.images = images;
-      entry.fileName = images[0]?.fileName;
-      delete entry.fileId;
+
+      for (const fid of removedExisting) await deleteFile(fid).catch(() => {});
+
+      savePageEntry(collection, entry);
+      closeModal(modal);
+
+      document.querySelector(`.project-card[data-entry-id="${entry.id}"]`)?.remove();
+      const gridId = isAwards ? 'award-grid' : 'project-grid';
+      document.getElementById(gridId).prepend(await buildProjectCard(entry, collection));
+      if (isAwards) document.querySelector('.awards-section')?.classList.add('has-cards');
+      else refreshProjectFilter();
+    } catch (err) {
+      console.error('[upload] failed:', err);
+      alert('Upload failed. A video may exceed your Supabase storage limit (free tier allows 50 MB per file). See the browser console for details.');
+      submit.disabled = false;
+      submit.textContent = prefill ? 'Save Changes' : 'Add ' + singular;
     }
-
-    for (const fid of removedExisting) await deleteFile(fid).catch(() => {});
-
-    savePageEntry(collection, entry);
-    closeModal(modal);
-
-    document.querySelector(`.project-card[data-entry-id="${entry.id}"]`)?.remove();
-    const gridId = isAwards ? 'award-grid' : 'project-grid';
-    document.getElementById(gridId).prepend(await buildProjectCard(entry, collection));
-    if (isAwards) document.querySelector('.awards-section')?.classList.add('has-cards');
-    else refreshProjectFilter();
   });
 
   renderStrip();

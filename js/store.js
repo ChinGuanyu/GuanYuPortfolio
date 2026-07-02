@@ -118,13 +118,17 @@ export async function uploadMedia(id, blob) {
 
 export async function loadMedia(id) {
   if (configured && sb) {
-    const { data } = sb.storage.from(BUCKET).getPublicUrl(id);
     try {
-      // cache-bust so a freshly replaced file is fetched, not a stale cached copy
-      const res = await fetch(data.publicUrl + '?v=' + Date.now());
-      if (res.ok) return await res.blob();
-    } catch (e) { console.error('[store] load failed:', id, e); }
-    return null;
+      // download() works for BOTH public and private buckets (it uses the API key
+      // + the read RLS policy), so media shows regardless of the bucket's public
+      // flag. It also always returns the current bytes, so no cache-busting needed.
+      const { data, error } = await sb.storage.from(BUCKET).download(id);
+      if (error) { console.error('[store] load failed:', id, error); return null; }
+      return data;
+    } catch (e) {
+      console.error('[store] load failed:', id, e);
+      return null;
+    }
   }
   return idbGet(id);
 }
