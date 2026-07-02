@@ -149,11 +149,7 @@ function staticMediaImages(key, media) {
 // Delete every backing file referenced by a static-card media override.
 async function removeStaticMediaFiles(key, media) {
   if (!media) return;
-  if (media.type === 'fbx') {
-    await deleteFile(media.fileId || staticFileId(key)).catch(() => {});
-  } else {
-    for (const im of staticMediaImages(key, media)) await deleteFile(im.fileId).catch(() => {});
-  }
+  for (const im of staticMediaImages(key, media)) await deleteFile(im.fileId).catch(() => {});
 }
 
 // Build an auto-playing carousel of images and/or videos from
@@ -264,27 +260,16 @@ function clearThumbMedia(thumb) {
   });
 }
 
-// Render a static-card media override (fbx viewer or image carousel) into a card thumb.
+// Render a static-card media override (image/video carousel) into a card thumb.
 async function applyCardMedia(card, key, media) {
   const thumb = card.querySelector('.project-card__thumb');
   if (!thumb || !media) return;
   clearThumbMedia(thumb);
 
-  if (media.type === 'fbx') {
-    const blob = await loadFile(media.fileId || staticFileId(key));
-    if (!blob) return;
-    card.classList.add('has-media');
-    const canvas = document.createElement('canvas');
-    canvas.style.cssText = 'display:block;width:100%;height:100%;';
-    thumb.appendChild(canvas);
-    const buf = await blob.arrayBuffer();
-    import('./fbx-viewer.js').then(({ initFBXViewer }) => initFBXViewer(canvas, buf));
-  } else {
-    const car = await buildImageCarousel(staticMediaImages(key, media));
-    if (!car) return;
-    card.classList.add('has-media');
-    thumb.appendChild(car);
-  }
+  const car = await buildImageCarousel(staticMediaImages(key, media));
+  if (!car) return;
+  card.classList.add('has-media');
+  thumb.appendChild(car);
 
   const label = thumb.querySelector('.project-card__label');
   if (label && media.fileName) label.textContent = `// ${media.fileName}`;
@@ -328,9 +313,9 @@ function setupStaticCardControls(card, key) {
     const overlay = document.createElement('div');
     overlay.className = 'thumb-upload';
     overlay.innerHTML = `
-      <span class="thumb-upload__pick">⬆ Upload images / video / .fbx</span>
+      <span class="thumb-upload__pick">⬆ Upload images / video</span>
       <button type="button" class="thumb-upload__remove">Remove media</button>
-      <input type="file" accept=".fbx,.png,.jpg,.jpeg,.webp,.gif,.avif,.mp4,.webm,.ogg,.ogv,.mov,.m4v" multiple hidden>`;
+      <input type="file" accept=".png,.jpg,.jpeg,.webp,.gif,.avif,.mp4,.webm,.ogg,.ogv,.mov,.m4v" multiple hidden>`;
     const input  = overlay.querySelector('input');
     const remove = overlay.querySelector('.thumb-upload__remove');
 
@@ -345,29 +330,18 @@ function setupStaticCardControls(card, key) {
       e.target.value = '';
       if (!files.length) return;
       const prev = getCardOverride('3d-projects', key).media;
-      const fbx  = files.find(f => f.name.toLowerCase().endsWith('.fbx'));
-      let media;
-
-      if (fbx) {
-        await removeStaticMediaFiles(key, prev);
+      const imgs = files.filter(f => isImageName(f.name) || isVideoName(f.name));
+      if (!imgs.length) return;
+      // append to an existing carousel, or start a new one
+      const existing = (prev && prev.type === 'image') ? staticMediaImages(key, prev) : [];
+      const added = [];
+      for (const f of imgs) {
         const fileId = genId();
-        await saveFile(fileId, fbx);
-        media = { type: 'fbx', fileId, fileName: fbx.name };
-      } else {
-        const imgs = files.filter(f => isImageName(f.name) || isVideoName(f.name));
-        if (!imgs.length) return;
-        // append to an existing carousel, or start a new one
-        const existing = (prev && prev.type === 'image') ? staticMediaImages(key, prev) : [];
-        if (prev && prev.type === 'fbx') await removeStaticMediaFiles(key, prev);
-        const added = [];
-        for (const f of imgs) {
-          const fileId = genId();
-          await saveFile(fileId, f);
-          added.push({ fileId, fileName: f.name, kind: mediaKind(f.name) });
-        }
-        const images = [...existing, ...added];
-        media = { type: 'image', images, fileName: images[0]?.fileName };
+        await saveFile(fileId, f);
+        added.push({ fileId, fileName: f.name, kind: mediaKind(f.name) });
       }
+      const images = [...existing, ...added];
+      const media = { type: 'image', images, fileName: images[0]?.fileName };
 
       setCardOverride('3d-projects', key, { media });
       await applyCardMedia(card, key, media);
@@ -664,21 +638,8 @@ async function openDetailModal(card) {
     const entry = entries.find(e => e.id === entryId);
     if (entry) {
       preview.className = 'detail-modal__preview';
-      if (entry.type === 'fbx' && entry.fileId) {
-        const blob = await loadFile(entry.fileId);
-        if (blob) {
-          const canvas = document.createElement('canvas');
-          canvas.className = 'detail-modal__canvas';
-          preview.appendChild(canvas);
-          const buf = await blob.arrayBuffer();
-          import('./fbx-viewer.js').then(({ initFBXViewer }) => {
-            initFBXViewer(canvas, buf).then(cleanup => { detailCleanup = cleanup; });
-          });
-        }
-      } else {
-        const car = await buildImageCarousel(entryImages(entry), { contain: true, videoControls: true });
-        if (car) { preview.appendChild(car); detailCleanup = car._cleanup; }
-      }
+      const car = await buildImageCarousel(entryImages(entry), { contain: true, videoControls: true });
+      if (car) { preview.appendChild(car); detailCleanup = car._cleanup; }
     }
   } else {
     // Static card — show uploaded media if present, else the wireframe placeholder
@@ -686,21 +647,8 @@ async function openDetailModal(card) {
     const ov  = key !== undefined ? getCardOverride('3d-projects', key) : {};
     if (ov.media) {
       preview.className = 'detail-modal__preview';
-      if (ov.media.type === 'fbx') {
-        const blob = await loadFile(ov.media.fileId || staticFileId(key));
-        if (blob) {
-          const canvas = document.createElement('canvas');
-          canvas.className = 'detail-modal__canvas';
-          preview.appendChild(canvas);
-          const buf = await blob.arrayBuffer();
-          import('./fbx-viewer.js').then(({ initFBXViewer }) => {
-            initFBXViewer(canvas, buf).then(cleanup => { detailCleanup = cleanup; });
-          });
-        }
-      } else {
-        const car = await buildImageCarousel(staticMediaImages(key, ov.media), { contain: true, videoControls: true });
-        if (car) { preview.appendChild(car); detailCleanup = car._cleanup; }
-      }
+      const car = await buildImageCarousel(staticMediaImages(key, ov.media), { contain: true, videoControls: true });
+      if (car) { preview.appendChild(car); detailCleanup = car._cleanup; }
     } else {
       const hue = card.dataset.hue || 'clay';
       preview.className = `detail-modal__preview detail-modal__preview--${hue}`;
@@ -754,20 +702,8 @@ async function buildProjectCard(entry, collection = '3d-projects') {
     </div>`;
 
   const thumb = card.querySelector('.project-card__thumb');
-  if (entry.type === 'fbx' && entry.fileId) {
-    const blob = await loadFile(entry.fileId);
-    if (blob) {
-      card.classList.add('has-media');
-      const canvas = document.createElement('canvas');
-      canvas.style.cssText = 'display:block;width:100%;height:100%;';
-      thumb.appendChild(canvas);
-      const buf = await blob.arrayBuffer();
-      import('./fbx-viewer.js').then(({ initFBXViewer }) => initFBXViewer(canvas, buf));
-    }
-  } else {
-    const car = await buildImageCarousel(entryImages(entry));
-    if (car) { card.classList.add('has-media'); thumb.appendChild(car); }
-  }
+  const car = await buildImageCarousel(entryImages(entry));
+  if (car) { card.classList.add('has-media'); thumb.appendChild(car); }
 
   card.querySelector('.card-ctrl-btn--edit').addEventListener('click', e => {
     e.stopPropagation();
@@ -776,7 +712,6 @@ async function buildProjectCard(entry, collection = '3d-projects') {
   card.querySelector('.card-ctrl-btn--delete').addEventListener('click', async e => {
     e.stopPropagation();
     if (!confirm(`Delete "${entry.title}"?`)) return;
-    if (entry.type === 'fbx' && entry.fileId) await deleteFile(entry.fileId).catch(() => {});
     for (const im of entryImages(entry)) await deleteFile(im.fileId).catch(() => {});
     deletePageEntry(collection, entry.id);
     card.remove();
@@ -909,7 +844,7 @@ function startRenameFilter(btn) {
   label.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); label.blur(); } });
 }
 
-// ─── Upload modal (multi-image carousel + optional .fbx) ──────
+// ─── Upload modal (multi-image / video carousel) ──────────────
 async function openUploadModal(collection = '3d-projects', prefill = null) {
   const old = document.getElementById('editor-upload-modal');
   if (old) old.remove();
@@ -924,9 +859,9 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
     <form class="editor-form" id="upload-form" novalidate>
       <div class="upload-dropzone" id="upload-dropzone">
         <span class="upload-dropzone__icon">⬆</span>
-        <span class="upload-dropzone__label">Drop images, videos, or a .fbx here, or click to browse</span>
-        <span class="upload-dropzone__sub">Images &amp; videos become a carousel · .fbx · .mp4 · .png · .jpg · .webp</span>
-        <input type="file" id="upload-file-input" accept=".fbx,.png,.jpg,.jpeg,.webp,.gif,.avif,.mp4,.webm,.ogg,.ogv,.mov,.m4v" multiple style="display:none">
+        <span class="upload-dropzone__label">Drop images or videos here, or click to browse</span>
+        <span class="upload-dropzone__sub">Images &amp; videos become a carousel · .mp4 · .png · .jpg · .webp</span>
+        <input type="file" id="upload-file-input" accept=".png,.jpg,.jpeg,.webp,.gif,.avif,.mp4,.webm,.ogg,.ogv,.mov,.m4v" multiple style="display:none">
       </div>
       <div class="upload-media-strip" id="upload-media-strip"></div>
       <div class="editor-field__row">
@@ -960,41 +895,23 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
       </div>
     </form>`;
 
-  // Media working set. Either a list of image slides OR a single fbx slide.
-  //   image slide: { fileName, file? (new), fileId? (existing), url }
-  //   fbx slide:   { fileName, file? (new), fileId? (existing) }
+  // Media working set: a list of image/video slides.
+  //   slide: { fileName, kind, file? (new), fileId? (existing), url }
   let imageSlides = [];
-  let fbxSlide    = null;
   const removedExisting = [];   // fileIds of removed existing files, deleted on save
 
-  if (p.type === 'fbx' && p.fileId) {
-    fbxSlide = { fileId: p.fileId, fileName: p.fileName };
-  } else {
-    for (const im of entryImages(p)) {
-      const blob = await loadFile(im.fileId);
-      imageSlides.push({
-        fileId: im.fileId, fileName: im.fileName,
-        kind: im.kind || mediaKind(im.fileName),
-        url: blob ? URL.createObjectURL(blob) : '',
-      });
-    }
+  for (const im of entryImages(p)) {
+    const blob = await loadFile(im.fileId);
+    imageSlides.push({
+      fileId: im.fileId, fileName: im.fileName,
+      kind: im.kind || mediaKind(im.fileName),
+      url: blob ? URL.createObjectURL(blob) : '',
+    });
   }
 
   const strip = document.getElementById('upload-media-strip');
   function renderStrip() {
     strip.innerHTML = '';
-    if (fbxSlide) {
-      const chip = document.createElement('div');
-      chip.className = 'media-chip media-chip--file';
-      chip.innerHTML = `<span>🧊 ${fbxSlide.fileName || '3D model'}</span><button type="button" class="media-chip__x" aria-label="Remove">×</button>`;
-      chip.querySelector('.media-chip__x').addEventListener('click', () => {
-        if (fbxSlide.fileId && !fbxSlide.file) removedExisting.push(fbxSlide.fileId);
-        if (fbxSlide.url) URL.revokeObjectURL(fbxSlide.url);
-        fbxSlide = null; renderStrip();
-      });
-      strip.appendChild(chip);
-      return;
-    }
     imageSlides.forEach((s, i) => {
       const chip = document.createElement('div');
       chip.className = 'media-chip media-chip--img';
@@ -1012,20 +929,9 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
   }
 
   function addFiles(fileList) {
-    const files = [...fileList];
-    if (!files.length) return;
-    const fbx = files.find(f => f.name.toLowerCase().endsWith('.fbx'));
-    if (fbx) {
-      // switch to a single 3D model — drop any pending images
-      imageSlides.forEach(s => { if (s.fileId && !s.file) removedExisting.push(s.fileId); });
-      imageSlides = [];
-      fbxSlide = { file: fbx, fileName: fbx.name };
-    } else {
-      const media = files.filter(f => isImageName(f.name) || isVideoName(f.name));
-      if (!media.length) return;
-      if (fbxSlide) { if (fbxSlide.fileId && !fbxSlide.file) removedExisting.push(fbxSlide.fileId); fbxSlide = null; }
-      media.forEach(f => imageSlides.push({ file: f, fileName: f.name, kind: mediaKind(f.name), url: URL.createObjectURL(f) }));
-    }
+    const media = [...fileList].filter(f => isImageName(f.name) || isVideoName(f.name));
+    if (!media.length) return;
+    media.forEach(f => imageSlides.push({ file: f, fileName: f.name, kind: mediaKind(f.name), url: URL.createObjectURL(f) }));
     renderStrip();
   }
 
@@ -1046,7 +952,7 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
     e.preventDefault();
     const title = document.getElementById('up-title').value.trim();
     if (!title) return;
-    if (!fbxSlide && imageSlides.length === 0) { alert('Add at least one image or a .fbx file.'); return; }
+    if (imageSlides.length === 0) { alert('Add at least one image or video.'); return; }
 
     const submit = e.target.querySelector('button[type="submit"]');
     submit.disabled = true; submit.textContent = 'Saving…';
@@ -1061,25 +967,15 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
         tags:        document.getElementById('up-tags').value.split(',').map(t => t.trim()).filter(Boolean),
       };
 
-      if (fbxSlide) {
-        let fileId = fbxSlide.fileId;
-        if (fbxSlide.file) { fileId = fbxSlide.fileId || genId(); await saveFile(fileId, fbxSlide.file); }
-        entry.type = 'fbx';
-        entry.fileId = fileId;
-        entry.fileName = fbxSlide.fileName;
-        entry.images = [];
-      } else {
-        const images = [];
-        for (const s of imageSlides) {
-          const kind = s.kind || mediaKind(s.fileName);
-          if (s.file) { const fid = genId(); await saveFile(fid, s.file); images.push({ fileId: fid, fileName: s.fileName, kind }); }
-          else images.push({ fileId: s.fileId, fileName: s.fileName, kind });
-        }
-        entry.type = 'image';
-        entry.images = images;
-        entry.fileName = images[0]?.fileName;
-        delete entry.fileId;
+      const images = [];
+      for (const s of imageSlides) {
+        const kind = s.kind || mediaKind(s.fileName);
+        if (s.file) { const fid = genId(); await saveFile(fid, s.file); images.push({ fileId: fid, fileName: s.fileName, kind }); }
+        else images.push({ fileId: s.fileId, fileName: s.fileName, kind });
       }
+      entry.type = 'image';
+      entry.images = images;
+      entry.fileName = images[0]?.fileName;
 
       for (const fid of removedExisting) await deleteFile(fid).catch(() => {});
 
