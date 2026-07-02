@@ -118,17 +118,24 @@ export async function uploadMedia(id, blob) {
 
 export async function loadMedia(id) {
   if (configured && sb) {
+    // 1) Public URL — works when the bucket is public (and streams videos well).
     try {
-      // download() works for BOTH public and private buckets (it uses the API key
-      // + the read RLS policy), so media shows regardless of the bucket's public
-      // flag. It also always returns the current bytes, so no cache-busting needed.
+      const { data } = sb.storage.from(BUCKET).getPublicUrl(id);
+      if (data?.publicUrl) {
+        const res = await fetch(data.publicUrl);
+        if (res.ok) return await res.blob();
+      }
+    } catch (e) { /* fall through to authenticated download */ }
+
+    // 2) Authenticated download — works for a private bucket that has a read policy.
+    try {
       const { data, error } = await sb.storage.from(BUCKET).download(id);
-      if (error) { console.error('[store] load failed:', id, error); return null; }
-      return data;
+      if (!error && data) return data;
+      if (error) console.error('[store] load failed (need public bucket or read policy):', id, error);
     } catch (e) {
       console.error('[store] load failed:', id, e);
-      return null;
     }
+    return null;
   }
   return idbGet(id);
 }
