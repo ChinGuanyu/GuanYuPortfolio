@@ -55,7 +55,8 @@ export async function initStore() {
       CONTENT_KEYS.forEach(k => {
         if (k in cache) { try { localStorage.setItem(k, JSON.stringify(cache[k])); } catch {} }
       });
-      await migrateLocalUp();
+      // Only push local data up when signed in (writes need auth; avoids 401 spam)
+      if (loggedIn) await migrateLocalUp();
     } catch (err) {
       console.error('[store] Supabase unavailable — using local storage instead:', err);
       configured = false;
@@ -131,9 +132,9 @@ export async function loadMedia(id) {
     try {
       const { data, error } = await sb.storage.from(BUCKET).download(id);
       if (!error && data) return data;
-      if (error) console.error('[store] load failed (need public bucket or read policy):', id, error);
+      if (error) console.warn('[store] media unavailable (re-upload needed):', id, error.message || error);
     } catch (e) {
-      console.error('[store] load failed:', id, e);
+      console.warn('[store] media unavailable:', id, e?.message || e);
     }
     return null;
   }
