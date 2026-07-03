@@ -133,6 +133,20 @@ const isImageName  = n => /\.(png|jpe?g|webp|gif|avif)$/i.test(n || '');
 const isVideoName  = n => /\.(mp4|webm|ogg|ogv|mov|m4v)$/i.test(n || '');
 const mediaKind    = n => (isVideoName(n) ? 'video' : 'image');
 
+// Embedded video links (YouTube / Vimeo)
+function parseEmbed(url) {
+  if (!url) return null;
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([\w-]{11})/i);
+  if (yt) return { provider: 'youtube', videoId: yt[1] };
+  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
+  if (vm) return { provider: 'vimeo', videoId: vm[1] };
+  return null;
+}
+function embedSrc(m)   { return m.provider === 'vimeo' ? `https://player.vimeo.com/video/${m.videoId}` : `https://www.youtube.com/embed/${m.videoId}?rel=0&playsinline=1`; }
+function embedThumb(m) { return m.provider === 'youtube' ? `https://img.youtube.com/vi/${m.videoId}/hqdefault.jpg` : ''; }
+function itemKind(m)   { return m.kind || mediaKind(m.fileName); }
+function isMotion(m)   { const k = itemKind(m); return k === 'video' || k === 'embed'; }
+
 // Normalize an entry's images to [{fileId, fileName}] (back-compat with a single fileId).
 function entryImages(entry) {
   if (Array.isArray(entry.images) && entry.images.length) return entry.images;
@@ -149,22 +163,32 @@ function staticMediaImages(key, media) {
 // Delete every backing file referenced by a static-card media override.
 async function removeStaticMediaFiles(key, media) {
   if (!media) return;
-  for (const im of staticMediaImages(key, media)) await deleteFile(im.fileId).catch(() => {});
+  for (const im of staticMediaImages(key, media)) if (im.fileId) await deleteFile(im.fileId).catch(() => {});
 }
 
-// Build an auto-playing carousel of images and/or videos from
-// [{fileId, fileName, kind?}]. Returns null if nothing loads. The element gets
-// a ._cleanup() to stop the timer, pause videos, and revoke object URLs.
+// Build an auto-playing carousel of images, uploaded videos, and/or embedded
+// video links (YouTube/Vimeo) from [{fileId?, fileName?, kind?, provider?, videoId?}].
+// Videos/embeds are shown FIRST (so a demo video is the default first page).
+// Returns null if nothing loads. The element gets a ._cleanup().
 // Options: contain (object-fit), videoControls (play controls on video slides).
 async function buildImageCarousel(mediaList, { contain = false, videoControls = false } = {}) {
+  // Video + embed slides come first, then images (stable within each group)
+  const ordered = [...mediaList].sort((a, b) => (isMotion(a) ? 0 : 1) - (isMotion(b) ? 0 : 1));
+
   const items = [];
-  for (const m of mediaList) {
-    const blob = await loadFile(m.fileId);
-    if (blob) items.push({ url: URL.createObjectURL(blob), kind: m.kind || mediaKind(m.fileName) });
+  for (const m of ordered) {
+    const kind = itemKind(m);
+    if (kind === 'embed') {
+      items.push({ kind: 'embed', provider: m.provider, videoId: m.videoId });
+    } else {
+      const blob = await loadFile(m.fileId);
+      if (blob) items.push({ url: URL.createObjectURL(blob), kind });
+    }
   }
   if (!items.length) return null;
 
-  const hasVideo = items.some(it => it.kind === 'video');
+  const hasVideo  = items.some(it => it.kind === 'video');
+  const hasMotion = items.some(it => it.kind === 'video' || it.kind === 'embed');
   const car = document.createElement('div');
   car.className = 'carousel' + (contain ? ' carousel--contain' : '');
 
@@ -173,7 +197,14 @@ async function buildImageCarousel(mediaList, { contain = false, videoControls = 
   const slides = [];
   items.forEach((it, i) => {
     let el;
-    if (it.kind === 'video') {
+    if (it.kind === 'embed') {
+      el = document.createElement('iframe');
+      el.src = embedSrc(it);
+      el.loading = 'lazy';
+      el.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      el.allowFullscreen = true;
+      el.setAttribute('frameborder', '0');
+    } else if (it.kind === 'video') {
       el = document.createElement('video');
       el.src = it.url;
       el.playsInline = true;
@@ -216,8 +247,8 @@ async function buildImageCarousel(mediaList, { contain = false, videoControls = 
     dots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
   };
   const stop  = () => { if (timer) { clearInterval(timer); timer = null; } };
-  // Auto-advance only for all-image carousels (videos play on their own time)
-  const start = () => { if (slides.length > 1 && !hasVideo && !timer) timer = setInterval(() => show(idx + 1), 4000); };
+  // Auto-advance only for all-image carousels (videos/embeds play on their own)
+  const start = () => { if (slides.length > 1 && !hasMotion && !timer) timer = setInterval(() => show(idx + 1), 4000); };
 
   if (slides.length > 1) {
     const prev = document.createElement('button');
@@ -247,8 +278,11 @@ async function buildImageCarousel(mediaList, { contain = false, videoControls = 
 
   car._cleanup = () => {
     stop();
-    slides.forEach(s => { if (s.tagName === 'VIDEO') s.pause(); });
-    items.forEach(it => URL.revokeObjectURL(it.url));
+    slides.forEach(s => {
+      if (s.tagName === 'VIDEO') s.pause();
+      if (s.tagName === 'IFRAME') s.src = 'about:blank';   // stop embedded playback
+    });
+    items.forEach(it => { if (it.url) URL.revokeObjectURL(it.url); });
   };
   return car;
 }
@@ -712,7 +746,7 @@ async function buildProjectCard(entry, collection = '3d-projects') {
   card.querySelector('.card-ctrl-btn--delete').addEventListener('click', async e => {
     e.stopPropagation();
     if (!confirm(`Delete "${entry.title}"?`)) return;
-    for (const im of entryImages(entry)) await deleteFile(im.fileId).catch(() => {});
+    for (const im of entryImages(entry)) if (im.fileId) await deleteFile(im.fileId).catch(() => {});
     deletePageEntry(collection, entry.id);
     card.remove();
   });
@@ -863,6 +897,10 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
         <span class="upload-dropzone__sub">Images &amp; videos become a carousel · .mp4 · .png · .jpg · .webp</span>
         <input type="file" id="upload-file-input" accept=".png,.jpg,.jpeg,.webp,.gif,.avif,.mp4,.webm,.ogg,.ogv,.mov,.m4v" multiple style="display:none">
       </div>
+      <div class="upload-link-row">
+        <input type="url" id="upload-link-input" placeholder="…or paste a YouTube / Vimeo link (demo video)">
+        <button type="button" class="editor-btn editor-btn--ghost" id="upload-link-add">Add link</button>
+      </div>
       <div class="upload-media-strip" id="upload-media-strip"></div>
       <div class="editor-field__row">
         <div class="editor-field">
@@ -901,6 +939,10 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
   const removedExisting = [];   // fileIds of removed existing files, deleted on save
 
   for (const im of entryImages(p)) {
+    if ((im.kind || mediaKind(im.fileName)) === 'embed') {
+      imageSlides.push({ kind: 'embed', provider: im.provider, videoId: im.videoId, fileName: im.fileName || 'video', url: embedThumb(im) });
+      continue;
+    }
     const blob = await loadFile(im.fileId);
     imageSlides.push({
       fileId: im.fileId, fileName: im.fileName,
@@ -915,9 +957,14 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
     imageSlides.forEach((s, i) => {
       const chip = document.createElement('div');
       chip.className = 'media-chip media-chip--img';
-      const inner = s.kind === 'video'
-        ? `<video src="${s.url}" muted preload="metadata"></video><span class="media-chip__badge">▶</span>`
-        : `<img src="${s.url}" alt="">`;
+      let inner;
+      if (s.kind === 'embed') {
+        inner = (s.url ? `<img src="${s.url}" alt="">` : `<span class="media-chip__ph">▶</span>`) + `<span class="media-chip__badge">▶</span>`;
+      } else if (s.kind === 'video') {
+        inner = `<video src="${s.url}" muted preload="metadata"></video><span class="media-chip__badge">▶</span>`;
+      } else {
+        inner = `<img src="${s.url}" alt="">`;
+      }
       chip.innerHTML = `${inner}<button type="button" class="media-chip__x" aria-label="Remove">×</button>`;
       chip.querySelector('.media-chip__x').addEventListener('click', () => {
         if (s.fileId && !s.file) removedExisting.push(s.fileId);
@@ -946,13 +993,25 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
     addFiles(e.dataTransfer.files);
   });
 
+  // Paste a YouTube / Vimeo link → add an embed slide
+  const linkInput = document.getElementById('upload-link-input');
+  function addLink() {
+    const parsed = parseEmbed(linkInput.value.trim());
+    if (!parsed) { alert('Paste a valid YouTube or Vimeo link.'); return; }
+    imageSlides.push({ kind: 'embed', provider: parsed.provider, videoId: parsed.videoId, fileName: `${parsed.provider} video`, url: embedThumb(parsed) });
+    linkInput.value = '';
+    renderStrip();
+  }
+  document.getElementById('upload-link-add').addEventListener('click', addLink);
+  linkInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addLink(); } });
+
   document.getElementById('upload-cancel').addEventListener('click', () => closeModal(modal));
 
   document.getElementById('upload-form').addEventListener('submit', async e => {
     e.preventDefault();
     const title = document.getElementById('up-title').value.trim();
     if (!title) return;
-    if (imageSlides.length === 0) { alert('Add at least one image or video.'); return; }
+    if (imageSlides.length === 0) { alert('Add at least one image, video, or video link.'); return; }
 
     const submit = e.target.querySelector('button[type="submit"]');
     submit.disabled = true; submit.textContent = 'Saving…';
@@ -969,6 +1028,7 @@ async function openUploadModal(collection = '3d-projects', prefill = null) {
 
       const images = [];
       for (const s of imageSlides) {
+        if (s.kind === 'embed') { images.push({ kind: 'embed', provider: s.provider, videoId: s.videoId, fileName: s.fileName || 'video' }); continue; }
         const kind = s.kind || mediaKind(s.fileName);
         if (s.file) { const fid = genId(); await saveFile(fid, s.file); images.push({ fileId: fid, fileName: s.fileName, kind }); }
         else images.push({ fileId: s.fileId, fileName: s.fileName, kind });

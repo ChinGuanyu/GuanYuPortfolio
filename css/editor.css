@@ -474,9 +474,11 @@ body.editor-active .filter-btn[data-filter]:not([data-filter="all"]) .filter-btn
   object-fit: cover;
   opacity: 0;
   transition: opacity 0.5s ease;
+  pointer-events: none;   /* only the active slide is interactive (matters for iframes) */
 }
-.carousel__slide.is-active { opacity: 1; }
+.carousel__slide.is-active { opacity: 1; z-index: 1; pointer-events: auto; }
 .carousel--contain .carousel__slide { object-fit: contain; }
+iframe.carousel__slide { border: 0; background: #000; }
 
 .carousel__nav {
   position: absolute;
@@ -546,6 +548,27 @@ body.editor-active .filter-btn[data-filter]:not([data-filter="all"]) .filter-btn
   z-index: 3;
 }
 
+/* ── Upload modal: paste-a-link row ── */
+.upload-link-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+.upload-link-row input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  outline: none;
+}
+.upload-link-row input:focus { border-color: var(--clay); }
+.upload-link-row button { white-space: nowrap; }
+
 /* ── Upload modal: media thumbnail strip ── */
 .upload-media-strip {
   display: flex;
@@ -574,6 +597,15 @@ body.editor-active .filter-btn[data-filter]:not([data-filter="all"]) .filter-btn
 }
 .media-chip--img img,
 .media-chip--img video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.media-chip__ph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--clay);
+  font-size: 1.1rem;
+}
 .media-chip__badge {
   position: absolute;
   bottom: 3px;
