@@ -10,9 +10,9 @@
   flex-direction: column;
   /* Soft studio glows: clay warmth top-right, wire blue mid-left, faint clay at the foot */
   background:
-    radial-gradient(ellipse 1000px 700px at 88% -12%, rgba(201, 123, 74, 0.10), transparent 62%),
-    radial-gradient(ellipse 800px 600px at -12% 35%, rgba(91, 122, 134, 0.09), transparent 60%),
-    radial-gradient(ellipse 900px 700px at 60% 115%, rgba(201, 123, 74, 0.06), transparent 60%),
+    radial-gradient(ellipse 1000px 700px at 88% -12%, rgba(201, 123, 74, 0.14), transparent 62%),
+    radial-gradient(ellipse 800px 600px at -12% 35%, rgba(91, 122, 134, 0.12), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 60% 115%, rgba(201, 123, 74, 0.09), transparent 60%),
     var(--bg);
   background-attachment: fixed;
 }
@@ -28,9 +28,9 @@
     linear-gradient(var(--line) 1px, transparent 1px),
     linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 64px 64px;
-  opacity: 0.14;
-  -webkit-mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.15));
-  mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.15));
+  opacity: 0.22;
+  -webkit-mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.5) 55%, rgba(0, 0, 0, 0.2));
+  mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.5) 55%, rgba(0, 0, 0, 0.2));
 }
 
 /* Concentric ring motif — quiet technical/HUD accent off the right edge */
@@ -46,7 +46,7 @@
   border-radius: 50%;
   background: repeating-radial-gradient(circle at center,
     transparent 0 40px,
-    rgba(91, 122, 134, 0.12) 40px 41px);
+    rgba(91, 122, 134, 0.18) 40px 41px);
   -webkit-mask-image: radial-gradient(circle at center, black 30%, transparent 72%);
   mask-image: radial-gradient(circle at center, black 30%, transparent 72%);
 }

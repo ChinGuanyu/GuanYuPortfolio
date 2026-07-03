@@ -71,13 +71,13 @@ const CSS_TEXT = `
 }
 .doodle svg * {
   fill: none;
-  stroke: var(--line, #33323B);
+  stroke: rgba(154, 151, 143, 0.75);   /* ink-dim tone — readable on graphite */
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.doodle--clay svg * { stroke: rgba(201, 123, 74, 0.55); }
-.doodle--wire svg * { stroke: rgba(91, 122, 134, 0.6); }
+.doodle--clay svg * { stroke: rgba(201, 123, 74, 0.75); }
+.doodle--wire svg * { stroke: rgba(91, 122, 134, 0.85); }
 
 /* Wandering path: X on the wrapper, Y + sway on the svg (separate transforms) */
 @keyframes doodleX    { from { translate: calc(var(--ax, 40px) * -1) 0; } to { translate: var(--ax, 40px) 0; } }

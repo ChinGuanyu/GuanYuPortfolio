@@ -3,8 +3,8 @@
 // Access: Ctrl+Shift+E to open login (no visible button)
 // Backend: see store.js — Supabase when configured, browser-only otherwise.
 
-import * as db from './store.js';
-import './doodles.js';   // floating doodle background on every page
+import * as db from './store.js?v=3';
+import './doodles.js?v=3';   // floating doodle background on every page
 
 const META_KEY  = 'gyu_meta';
 const CV_KEY    = 'gyu_cv';
