@@ -8,6 +8,47 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Soft studio glows: clay warmth top-right, wire blue mid-left, faint clay at the foot */
+  background:
+    radial-gradient(ellipse 1000px 700px at 88% -12%, rgba(201, 123, 74, 0.10), transparent 62%),
+    radial-gradient(ellipse 800px 600px at -12% 35%, rgba(91, 122, 134, 0.09), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 60% 115%, rgba(201, 123, 74, 0.06), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* Blueprint grid — fixed, fading out toward the bottom so content stays the focus */
+.page-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  opacity: 0.14;
+  -webkit-mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.15));
+  mask-image: linear-gradient(180deg, black, rgba(0, 0, 0, 0.45) 55%, rgba(0, 0, 0, 0.15));
+}
+
+/* Concentric ring motif — quiet technical/HUD accent off the right edge */
+.page-shell::after {
+  content: '';
+  position: fixed;
+  top: 18%;
+  right: -190px;
+  width: 540px;
+  height: 540px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle at center,
+    transparent 0 40px,
+    rgba(91, 122, 134, 0.12) 40px 41px);
+  -webkit-mask-image: radial-gradient(circle at center, black 30%, transparent 72%);
+  mask-image: radial-gradient(circle at center, black 30%, transparent 72%);
 }
 
 /* ── Site nav ── */
@@ -19,7 +60,9 @@
   border-bottom: 1px solid var(--line);
   position: sticky;
   top: 0;
-  background: var(--bg);
+  background: rgba(22, 21, 26, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 10;
 }
 
@@ -48,6 +91,21 @@
 .page-hero {
   padding: var(--space-6) var(--space-5) var(--space-4);
   max-width: 820px;
+  position: relative;
+}
+
+/* Ruler ticks under the hero — quiet drafting-table detail */
+.page-hero::after {
+  content: '';
+  position: absolute;
+  left: var(--space-5);
+  bottom: 0;
+  width: min(340px, 55%);
+  height: 8px;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 24px) left bottom / 100% 6px no-repeat,
+    linear-gradient(var(--line), var(--line)) left bottom / 100% 1px no-repeat;
 }
 
 .page-hero .mono-label {
@@ -117,6 +175,8 @@
 @media (max-width: 680px) {
   .site-nav { padding: var(--space-2) var(--space-3); }
   .page-hero { padding: var(--space-5) var(--space-3) var(--space-3); }
+  .page-hero::after { left: var(--space-3); }
+  .page-shell::after { display: none; }  /* rings off on small screens */
   .page-content { padding: 0 var(--space-3) var(--space-5); }
   .site-footer { padding: var(--space-3); flex-direction: column; align-items: flex-start; }
 }
