@@ -780,6 +780,12 @@ body.editor-active .editor-logout { display: inline-block; }
   color: var(--ink-dim);
   line-height: 1.7;
   margin: 0;
+  white-space: pre-line;   /* preserve the paragraph breaks typed in the editor */
+}
+
+/* Preserve line breaks in project/award card descriptions too */
+.project-card__desc {
+  white-space: pre-line;
 }
 
 .detail-modal__tags {
