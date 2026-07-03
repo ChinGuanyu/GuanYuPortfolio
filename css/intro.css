@@ -33,43 +33,7 @@
   mask-image: radial-gradient(ellipse at 50% 45%, transparent 18%, black 70%);
 }
 
-/* ── Doodle background ── */
-.doodles {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.doodles path,
-.doodles circle,
-.doodles ellipse {
-  fill: none;
-  stroke: var(--line);
-  stroke-width: 2.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.doodles .doodle--clay {
-  stroke: var(--clay);
-  opacity: 0.55;
-}
-.doodles .doodle--fill {
-  fill: var(--line);
-  stroke: none;
-}
-
-.doodles__set {
-  opacity: 0.7;
-  animation: doodle-float 14s ease-in-out infinite;
-  transform-origin: center;
-}
-@keyframes doodle-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-14px); }
-}
+/* Doodle background comes from js/doodles.js (shared with all pages) */
 
 /* ── Landing content ── */
 .landing {
@@ -133,6 +97,3 @@
   box-shadow: 0 8px 30px rgba(201, 123, 74, 0.3);
 }
 
-@media (max-width: 600px) {
-  .doodles__set { opacity: 0.45; }
-}

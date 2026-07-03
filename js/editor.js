@@ -4,6 +4,7 @@
 // Backend: see store.js — Supabase when configured, browser-only otherwise.
 
 import * as db from './store.js';
+import './doodles.js';   // floating doodle background on every page
 
 const META_KEY  = 'gyu_meta';
 const CV_KEY    = 'gyu_cv';
@@ -1246,7 +1247,7 @@ function cvFileName(ext) {
 
 // Render the whole CV to a canvas, hiding floating UI during the capture.
 async function captureCVCanvas() {
-  const hidden = ['.cv-actions', '.site-nav', '.editor-badge', '.editor-logout', '.editor-floatbar'];
+  const hidden = ['.cv-actions', '.site-nav', '.editor-badge', '.editor-logout', '.editor-floatbar', '.doodle-field'];
   const restore = [];
   hidden.forEach(sel => document.querySelectorAll(sel).forEach(el => {
     restore.push([el, el.style.visibility]);
