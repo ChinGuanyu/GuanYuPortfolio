@@ -55,10 +55,20 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+  Background lives on <body> ONLY. With html transparent, the body's
+  background propagates to the canvas and the body box itself paints
+  nothing — which lets the fixed z-index:-1 layers (blueprint grid,
+  rings, floating doodles) render above it. If html also had a
+  background, the body would paint over those layers and hide them.
+*/
+body {
+  background: var(--bg);
 }
 
 h1, h2, h3 {

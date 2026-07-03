@@ -113,7 +113,7 @@ function init() {
     wrap.style.left = spot.x + '%';
     wrap.style.top  = spot.y + '%';
     wrap.style.setProperty('--size', spot.s + 'px');
-    wrap.style.setProperty('--o',  (spot.s >= 44 ? rand(0.35, 0.5) : rand(0.2, 0.32)).toFixed(2));
+    wrap.style.setProperty('--o',  (spot.s >= 44 ? rand(0.45, 0.62) : rand(0.28, 0.4)).toFixed(2));
     wrap.style.setProperty('--dx', rand(20, 36).toFixed(1) + 's');
     wrap.style.setProperty('--dy', rand(13, 24).toFixed(1) + 's');
     wrap.style.setProperty('--dr', rand(14, 26).toFixed(1) + 's');
